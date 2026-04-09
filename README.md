@@ -19,24 +19,45 @@ A polished, playable puzzle prototype inspired by [Buses Away](https://apps.appl
 
 ---
 
-## 🗂️ Project Structure
+## 🗂️ Project Structure (Feature-Based Architecture)
 
-```
+We strictly use a **Feature-Based (Modular) Architecture** to ensure the project scales cleanly without creating "spaghetti code" or massive unwieldy folders.
+
+```text
 Assets/
-├── _Project/
-│   ├── Scripts/
-│   │   ├── Core/           # Game logic, grid, level management
-│   │   ├── Gameplay/       # Bus, stop, input controllers
-│   │   ├── UI/             # HUD, menus, transitions
-│   │   └── Utils/          # Helpers, extensions
-│   ├── Prefabs/            # Bus, stop, grid cell prefabs
-│   ├── Scenes/             # Main menu, Level 1, Level 2
-│   ├── Art/                # Sprites, materials, VFX
-│   └── Audio/              # SFX, music
-├── Plugins/
-└── StreamingAssets/
-    └── Levels/             # JSON level definitions
+  ├── _Project/               <-- Global application foundation
+  │      ├── Scenes/             # Boot, MainMenu, GamePlay scenes
+  │      └── Settings/           # URP Assets, input config, global system settings
+  │
+  └── _Features/              <-- Isolated, self-contained game modules
+         ├── Core/               # Game state, save/load, core input systems
+         ├── UI/                 # Canvases, popups, screen transitions
+         ├── PuzzleLogic/        # Win/lose conditions, queueing rules, validation
+         ├── BusMovement/        # Vehicle physics, steering, path following
+         └── LevelSystem/        # Procedural road generation, map data (ScriptableObjects)
 ```
+
+### 📂 Anatomy of a Feature Folder
+
+Every feature (e.g., `_Features/BusMovement/`) should strictly contain the following standardized sub-directories:
+
+- **`/Runtime/`**: In-game logic scripts (`.cs` files) that run on the device.
+- **`/Editor/`**: Custom editor tools, inspectors, and workflow scripts. **Crucial:** Prevents APK build failures.
+- **`/Data/`**: `ScriptableObjects` or local config data (e.g., specific level data).
+- **`/Prefabs/`**: 3D models or GameObjects specific to this feature.
+- **`/Art/`**: Materials, textures, and models that *only* belong to this feature.
+
+### 📜 Development Rules & Usage
+
+1. **Self-Containment**: A feature should be as self-contained as possible. You should theoretically be able to drag the `LevelSystem` folder into a completely new Unity project, and it would retain its core functionality.
+2. **Global Systems go to `_Project`**: If an element is needed across *multiple* unrelated features (like a global UI font or the Main Scene), place it in `_Project/` instead of a specific feature folder.
+3. **Data-Driven**: Use the `/Data/` folder within a feature for `ScriptableObjects` to allow game designers to tweak behavior without touching code.
+
+### 🚫 Mistakes to Avoid
+
+- ❌ **Mixing Editor and Runtime code**: NEVER place an editor script (using `using UnityEditor;`) inside the `/Runtime/` folder. It will instantly crash standard Android/iOS builds. Always put them in `/Editor/`.
+- ❌ **Cross-Feature Tangling**: Avoid having `BusMovement` directly reach deeply into the internal states of `UI`. Use events, interfaces, or standard managers (`Core`) to communicate.
+- ❌ **Dumping Assets in the Root Directory**: Never leave scripts, prefabs, or materials loose in `Assets/`. Always categorize them immediately into their respective feature folders.
 
 ---
 
