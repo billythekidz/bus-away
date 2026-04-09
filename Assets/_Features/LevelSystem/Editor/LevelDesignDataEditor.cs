@@ -98,85 +98,54 @@ namespace BusAway.LevelEditor
             for (int i = 0; i < data.grid.Length; i++)
                 data.grid[i] = RoadCellType.Empty;
 
-            // Complexity determines the target length of the road
-            int targetLength = (int)(Mathf.Min(data.gridWidth, data.gridHeight) * (1.5f + complexity * 0.8f));
-            
-            // Random start near the edge
-            int x = Random.Range(2, data.gridWidth - 2);
-            int y = 2; // Start near bottom
+            int minSize = 4;
+            int maxW = Mathf.Max(minSize, data.gridWidth - 2);
+            int maxH = Mathf.Max(minSize, data.gridHeight - 2);
 
-            data.grid[y * data.gridWidth + x] = RoadCellType.Road;
-            int placed = 1;
+            int ringW = Random.Range(minSize, maxW + 1);
+            int ringH = Random.Range(minSize, maxH + 1);
 
-            int dx = 0; int dy = 1; // Start moving up
-            int stuckCounter = 0;
+            int startX = Random.Range(1, data.gridWidth - ringW + 1);
+            int startY = Random.Range(1, data.gridHeight - ringH + 1);
 
-            while (placed < targetLength && stuckCounter < 50)
+            // Draw horizontal edges
+            for (int x = startX; x < startX + ringW; x++)
             {
-                // Chance to turn
-                float turnChance = 0.2f + (complexity * 0.1f);
-                if (Random.value < turnChance)
-                {
-                    // Turn left or right
-                    if (dx != 0) { dy = Random.value > 0.5f ? 1 : -1; dx = 0; }
-                    else { dx = Random.value > 0.5f ? 1 : -1; dy = 0; }
-                }
+                data.grid[startY * data.gridWidth + x] = RoadCellType.Road;
+                data.grid[(startY + ringH - 1) * data.gridWidth + x] = RoadCellType.Road;
+            }
 
-                int nx = x + dx;
-                int ny = y + dy;
-
-                // Check boundaries (keep 1 tile padding)
-                if (nx < 1 || nx >= data.gridWidth - 1 || ny < 1 || ny >= data.gridHeight - 1)
-                {
-                    // Force a turn
-                    int temp = dx; dx = dy == 0 ? (Random.value > 0.5f ? 1 : -1) : 0; dy = temp == 0 ? (Random.value > 0.5f ? 1 : -1) : 0;
-                    stuckCounter++;
-                    continue;
-                }
-
-                // Try to avoid 2x2 blocks of road (self-intersection prevention)
-                int neighbors = 0;
-                if (data.GetCell(nx+1, ny) != RoadCellType.Empty) neighbors++;
-                if (data.GetCell(nx-1, ny) != RoadCellType.Empty) neighbors++;
-                if (data.GetCell(nx, ny+1) != RoadCellType.Empty) neighbors++;
-                if (data.GetCell(nx, ny-1) != RoadCellType.Empty) neighbors++;
-
-                // If moving to a new cell would touch too many existing roads, skip and turn
-                if (data.GetCell(nx, ny) == RoadCellType.Empty && neighbors >= 2)
-                {
-                    int temp = dx; dx = dy == 0 ? (Random.value > 0.5f ? 1 : -1) : 0; dy = temp == 0 ? (Random.value > 0.5f ? 1 : -1) : 0;
-                    stuckCounter++;
-                    continue;
-                }
-
-                // Place road
-                if (data.GetCell(nx, ny) == RoadCellType.Empty)
-                {
-                    data.grid[ny * data.gridWidth + nx] = RoadCellType.Road;
-                    placed++;
-                    stuckCounter = 0;
-                }
-                
-                x = nx;
-                y = ny;
+            // Draw vertical edges
+            for (int y = startY; y < startY + ringH; y++)
+            {
+                data.grid[y * data.gridWidth + startX] = RoadCellType.Road;
+                data.grid[y * data.gridWidth + (startX + ringW - 1)] = RoadCellType.Road;
             }
 
             // Scatter some Bus Stops based on complexity
-            int numBusStops = 1 + (complexity / 2);
+            int numBusStops = 1 + complexity;
             for(int i=0; i<numBusStops; i++)
             {
                 int attempts = 100;
                 while(attempts > 0)
                 {
                     attempts--;
-                    int bx = Random.Range(1, data.gridWidth - 1);
-                    int by = Random.Range(1, data.gridHeight - 1);
+                    int bx = Random.Range(startX, startX + ringW);
+                    int by = Random.Range(startY, startY + ringH);
                     
                     if (data.GetCell(bx, by) == RoadCellType.Road)
                     {
-                        // Found a road, make it a bus stop
-                        data.grid[by * data.gridWidth + bx] = RoadCellType.BusStop;
-                        break;
+                        // Ensure corners are not bus stops
+                        bool isCorner = (bx == startX && by == startY) ||
+                                        (bx == startX && by == startY + ringH - 1) ||
+                                        (bx == startX + ringW - 1 && by == startY) ||
+                                        (bx == startX + ringW - 1 && by == startY + ringH - 1);
+                        
+                        if (!isCorner)
+                        {
+                            data.grid[by * data.gridWidth + bx] = RoadCellType.BusStop;
+                            break;
+                        }
                     }
                 }
             }
