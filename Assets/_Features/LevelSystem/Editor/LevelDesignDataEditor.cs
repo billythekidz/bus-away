@@ -177,19 +177,24 @@ namespace BusAway.LevelEditor
             for (int i = 0; i < data.grid.Length; i++)
                 data.grid[i] = RoadCellType.Empty;
 
+            // Guarantee a complete cycle by creating an outer ring road
+            for (int x = 0; x < data.gridWidth; x++)
+            {
+                data.grid[0 * data.gridWidth + x] = RoadCellType.GenericRoad;
+                data.grid[(data.gridHeight - 1) * data.gridWidth + x] = RoadCellType.GenericRoad;
+            }
+            for (int y = 0; y < data.gridHeight; y++)
+            {
+                data.grid[y * data.gridWidth + 0] = RoadCellType.GenericRoad;
+                data.grid[y * data.gridWidth + (data.gridWidth - 1)] = RoadCellType.GenericRoad;
+            }
+
             // minSize is inversely proportional to complexity (1 -> 6, 5 -> 2)
             int minSize = Mathf.Max(2, 7 - complexity);
             
-            RectInt rootArea = new RectInt(0, 0, data.gridWidth, data.gridHeight);
+            // Run BSP inside the ring
+            RectInt rootArea = new RectInt(1, 1, data.gridWidth - 2, data.gridHeight - 2);
             RecursiveDivide(data, rootArea, minSize, true);
-
-            // Task 2: Hole Punching (Decimation)
-            float eraseChance = (6 - complexity) * 0.08f; 
-            for (int i = 0; i < data.grid.Length; i++)
-            {
-                if (data.grid[i] == RoadCellType.GenericRoad && Random.value < eraseChance)
-                    data.grid[i] = RoadCellType.Empty;
-            }
 
             // Task 3: Scatter POIs
             int attempts = 100;

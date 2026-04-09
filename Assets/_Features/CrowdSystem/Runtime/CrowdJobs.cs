@@ -18,6 +18,7 @@ namespace BusAway.CrowdSystem
         public int activeCount;
 
         [ReadOnly] public NativeArray<float3> targets;
+        [DeallocateOnJobCompletion]
         [ReadOnly] public NativeArray<float3> allPositions; // All positions for separation check
 
         public NativeArray<float3> positions;

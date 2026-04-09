@@ -45,6 +45,11 @@ namespace BusAway.CrowdSystem
             else Destroy(gameObject);
 
             InitializeArrays();
+
+            if (agentMaterial != null)
+            {
+                agentMaterial.enableInstancing = true;
+            }
         }
 
         private void InitializeArrays()
@@ -72,12 +77,24 @@ namespace BusAway.CrowdSystem
             if (matrices.IsCreated) matrices.Dispose();
         }
 
+        private void EnsureInitialized()
+        {
+            if (propertyBlock == null || !positions.IsCreated)
+            {
+                // We've likely suffered a domain reload in Play Mode. Native arrays are lost.
+                InitializeArrays();
+                activeCount = 0;
+            }
+        }
+
         /// <summary>
         /// Spawns a character and returns its tracking index.
         /// Warning: Indices can change if characters are removed.
         /// </summary>
         public int SpawnCharacter(Vector3 position, Vector3 target, Color color)
         {
+            EnsureInitialized();
+
             // Ensure previous jobs are done before modifying arrays
             crowdJobHandle.Complete();
 
@@ -102,6 +119,7 @@ namespace BusAway.CrowdSystem
         /// </summary>
         public void RemoveCharacter(int index)
         {
+            EnsureInitialized();
             crowdJobHandle.Complete();
 
             if (index < 0 || index >= activeCount) return;
@@ -125,6 +143,7 @@ namespace BusAway.CrowdSystem
         /// </summary>
         public void SetTarget(int index, Vector3 newTarget)
         {
+            EnsureInitialized();
             crowdJobHandle.Complete();
             if (index >= 0 && index < activeCount)
             {
@@ -134,10 +153,16 @@ namespace BusAway.CrowdSystem
 
         private void Update()
         {
+            EnsureInitialized();
             if (activeCount == 0) return;
 
             // 1. Ensure previous frame's job is complete
             crowdJobHandle.Complete();
+
+            // Create a temp copy of positions to avoid Job System aliasing check (reading and writing to same array)
+            // 12KB copy is incredibly cheap (0.00x ms)
+            NativeArray<float3> tempPositions = new NativeArray<float3>(activeCount, Allocator.TempJob);
+            NativeArray<float3>.Copy(positions, tempPositions, activeCount);
 
             // 2. Schedule Movement Job only for activeCount
             var movementJob = new CrowdMovementJob
@@ -150,7 +175,7 @@ namespace BusAway.CrowdSystem
                 arrivalDistance = arrivalDistance,
                 activeCount = activeCount,
                 targets = targets,
-                allPositions = positions,
+                allPositions = tempPositions, // This array will be auto-disposed because we added [DeallocateOnJobCompletion]
                 positions = positions,
                 velocities = velocities
             };
@@ -211,5 +236,61 @@ namespace BusAway.CrowdSystem
                 rendered += batchSize;
             }
         }
+
+        #region Debug Context Menus
+        [ContextMenu("Debug: Spawn 10 Agents")]
+        public void DebugSpawn10() => DebugSpawn(10);
+
+        [ContextMenu("Debug: Spawn 100 Agents")]
+        public void DebugSpawn100() => DebugSpawn(100);
+
+        [ContextMenu("Debug: Spawn 1000 Agents")]
+        public void DebugSpawn1000() => DebugSpawn(1000);
+
+        private void DebugSpawn(int count)
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("Enter Play Mode to test Crowd System!");
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 pos = transform.position + new Vector3(UnityEngine.Random.Range(-5f, 5f), 0, UnityEngine.Random.Range(-5f, 5f));
+                Vector3 target = pos + new Vector3(UnityEngine.Random.Range(-10f, 10f), 0, UnityEngine.Random.Range(-10f, 10f));
+                Color col = new Color(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value);
+                SpawnCharacter(pos, target, col);
+            }
+        }
+
+        [ContextMenu("Debug: Set Random Targets")]
+        public void DebugSetRandomTargets()
+        {
+            for (int i = 0; i < activeCount; i++)
+            {
+                float3 pos = positions[i];
+                Vector3 target = new Vector3(pos.x + UnityEngine.Random.Range(-10f, 10f), 0, pos.z + UnityEngine.Random.Range(-10f, 10f));
+                SetTarget(i, target);
+            }
+        }
+
+        [ContextMenu("Debug: Remove Half")]
+        public void DebugRemoveHalf()
+        {
+            int toRemove = activeCount / 2;
+            for (int i = 0; i < toRemove; i++)
+            {
+                RemoveCharacter(UnityEngine.Random.Range(0, activeCount)); // Removing randomly shifts items, but still works
+            }
+        }
+
+        [ContextMenu("Debug: Clear All")]
+        public void DebugClearAll()
+        {
+            crowdJobHandle.Complete();
+            activeCount = 0;
+        }
+        #endregion
     }
 }
