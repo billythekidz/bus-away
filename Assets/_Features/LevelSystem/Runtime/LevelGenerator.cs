@@ -17,6 +17,7 @@ namespace BusAway.Gameplay
         public GameObject tileCornerPrefab;
         public GameObject tileTJunctionPrefab;
         public GameObject tileCrossPrefab;
+        public GameObject tileInnerCornerPrefab;
         public GameObject tileBusStopPrefab;
         
         [Header("Buses")]

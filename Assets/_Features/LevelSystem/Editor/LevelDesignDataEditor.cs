@@ -1,7 +1,7 @@
-using UnityEngine;
-using UnityEditor;
 using System.Collections.Generic;
 using BusAway.Level;
+using UnityEditor;
+using UnityEngine;
 
 namespace BusAway.LevelEditor
 {
@@ -17,7 +17,6 @@ namespace BusAway.LevelEditor
             GUILayout.Label("Map Level Configuration", EditorStyles.boldLabel);
             data.gridWidth = EditorGUILayout.IntSlider("Grid Width", data.gridWidth, 4, 30);
             data.gridHeight = EditorGUILayout.IntSlider("Grid Height", data.gridHeight, 4, 30);
-            data.tileSize = EditorGUILayout.FloatField("Tile Size", data.tileSize);
 
             if (data.grid == null || data.grid.Length != data.gridWidth * data.gridHeight)
             {
@@ -31,7 +30,7 @@ namespace BusAway.LevelEditor
             {
                 GUILayout.Space(10);
                 GUILayout.Label("Map Editor (Click to toggle)", EditorStyles.boldLabel);
-                
+
                 // Draw 2D Grid
                 // Y=0 is near camera (bottom of game screen), so we render from Y=0 downward
                 // to match the game's top-down view (Y=gridHeight-1 at top of screen = top of editor)
@@ -46,8 +45,8 @@ namespace BusAway.LevelEditor
 
                         string label = ".";
                         Color btnColor = Color.white;
-                        
-                        if (cell == RoadCellType.Road) 
+
+                        if (cell == RoadCellType.Road)
                         {
                             label = "▒";
                             btnColor = new Color(0.3f, 0.3f, 0.3f);
@@ -73,7 +72,7 @@ namespace BusAway.LevelEditor
 
                 GUILayout.Space(20);
                 GUILayout.Label("Random Generator", EditorStyles.boldLabel);
-                
+
                 EditorGUILayout.BeginHorizontal();
                 randomComplexity = EditorGUILayout.IntSlider("Complexity", randomComplexity, 1, 5);
                 if (GUILayout.Button("Generate Random Grid", GUILayout.Height(20)))
@@ -118,40 +117,42 @@ namespace BusAway.LevelEditor
             for (int y = startY + ringH - 1; y > startY; y--) path.Add(new Vector2Int(startX, y));
 
             int deformIters = complexity * 4;
-            while(deformIters-- > 0 && path.Count > 0) 
+            while (deformIters-- > 0 && path.Count > 0)
             {
                 // Find all valid straight segments of length 3 cells
                 List<int> validIndices = new List<int>();
-                for(int i = 0; i < path.Count; i++) 
+                for (int i = 0; i < path.Count; i++)
                 {
                     Vector2Int p0 = path[(i + path.Count - 1) % path.Count];
                     Vector2Int p2 = path[(i + 1) % path.Count];
                     if (p0.x == p2.x || p0.y == p2.y) validIndices.Add(i);
                 }
                 if (validIndices.Count == 0) break;
-                
+
                 int pick = validIndices[Random.Range(0, validIndices.Count)];
                 Vector2Int P0 = path[(pick + path.Count - 1) % path.Count];
                 Vector2Int P1 = path[pick];
                 Vector2Int P2 = path[(pick + 1) % path.Count];
-                
+
                 Vector2Int V = P2 - P0;
-                Vector2Int[] normals = new Vector2Int[] { new Vector2Int(V.y/2, -V.x/2), new Vector2Int(-V.y/2, V.x/2) };
+                Vector2Int[] normals = new Vector2Int[] { new Vector2Int(V.y / 2, -V.x / 2), new Vector2Int(-V.y / 2, V.x / 2) };
                 Vector2Int N = normals[Random.Range(0, 2)];
-                
+
                 Vector2Int C = P0 + N;
                 Vector2Int M = P1 + N;
                 Vector2Int D = P2 + N;
-                
+
                 // Bounds check with margin
-                if (C.x < 1 || C.x >= data.gridWidth-1 || C.y < 1 || C.y >= data.gridHeight-1) continue;
-                if (M.x < 1 || M.x >= data.gridWidth-1 || M.y < 1 || M.y >= data.gridHeight-1) continue;
-                if (D.x < 1 || D.x >= data.gridWidth-1 || D.y < 1 || D.y >= data.gridHeight-1) continue;
-                
+                if (C.x < 1 || C.x >= data.gridWidth - 1 || C.y < 1 || C.y >= data.gridHeight - 1) continue;
+                if (M.x < 1 || M.x >= data.gridWidth - 1 || M.y < 1 || M.y >= data.gridHeight - 1) continue;
+                if (D.x < 1 || D.x >= data.gridWidth - 1 || D.y < 1 || D.y >= data.gridHeight - 1) continue;
+
                 // Neighbor check
-                System.Func<Vector2Int, int> countNeighbors = (pos) => {
+                System.Func<Vector2Int, int> countNeighbors = (pos) =>
+                {
                     int c = 0;
-                    foreach(var p in path) {
+                    foreach (var p in path)
+                    {
                         if (p == pos) return 100; // Self collision
                         int dx = Mathf.Abs(p.x - pos.x);
                         int dy = Mathf.Abs(p.y - pos.y);
@@ -159,24 +160,24 @@ namespace BusAway.LevelEditor
                     }
                     return c;
                 };
-                
+
                 Vector2Int savedP1 = path[pick];
                 path.RemoveAt(pick);
-                
-                if (countNeighbors(C) == 1 && countNeighbors(M) == 0 && countNeighbors(D) == 1) 
+
+                if (countNeighbors(C) == 1 && countNeighbors(M) == 0 && countNeighbors(D) == 1)
                 {
                     path.Insert(pick, D);
                     path.Insert(pick, M);
                     path.Insert(pick, C);
-                } 
-                else 
+                }
+                else
                 {
                     path.Insert(pick, savedP1);
                 }
             }
-            
+
             // Write path to grid
-            foreach(var p in path) 
+            foreach (var p in path)
             {
                 data.grid[p.y * data.gridWidth + p.x] = RoadCellType.Road;
             }
@@ -184,11 +185,11 @@ namespace BusAway.LevelEditor
             // Scatter Bus Stops on straight segments
             int numBusStops = 1 + complexity;
             int stopAttempts = 100;
-            while(numBusStops > 0 && stopAttempts-- > 0)
+            while (numBusStops > 0 && stopAttempts-- > 0)
             {
                 int idx = Random.Range(0, path.Count);
                 Vector2Int b = path[idx];
-                
+
                 if (data.GetCell(b.x, b.y) == RoadCellType.Road)
                 {
                     Vector2Int prev = path[(idx + path.Count - 1) % path.Count];

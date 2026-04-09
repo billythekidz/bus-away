@@ -34,10 +34,11 @@ namespace BusAway.Level
     public class LevelDesignData : ScriptableObject
     {
         [Header("Grid Config")]
-        public int gridWidth = 10;
-        public int gridHeight = 10;
-        public float tileSize = 2f; 
-        
+        public int gridWidth = 8;
+        public int gridHeight = 5;
+        public float tileSize => 1f;
+
+
         [HideInInspector]
         public RoadCellType[] grid; // Array size: width * height
 
