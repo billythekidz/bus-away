@@ -18,7 +18,9 @@ namespace BusAway.Gameplay
         public GameObject tileTJunctionPrefab;
         public GameObject tileCrossPrefab;
         public GameObject tileInnerCornerPrefab;
+        public GameObject tileDeadEndPrefab;
         public GameObject tileBusStopPrefab;
+        public GameObject tileCrosswalkPrefab;
         
         [Header("Buses")]
         public GameObject busPrefab;
@@ -67,54 +69,50 @@ namespace BusAway.Gameplay
                     RoadCellType cell = activeLevelData.GetCell(x, y);
                     if (cell == RoadCellType.Empty) continue;
 
-                    // Evaluate neighbors
-                    bool n = HasRoad(x, y + 1);
-                    bool sn = HasRoad(x, y - 1);
-                    bool e = HasRoad(x + 1, y);
-                    bool w = HasRoad(x - 1, y);
-
-                    int mask = (n ? 1 : 0) | (e ? 2 : 0) | (sn ? 4 : 0) | (w ? 8 : 0);
-
                     GameObject prefabTemplate = tileStraightPrefab;
                     float rotY = 0f;
                     string shapeTypeStr = "Straight";
 
-                    switch (mask)
+                    switch (cell)
                     {
-                        // Straights / Dead Ends
-                        case 0:
-                        case 1: // N
-                        case 4: // S
-                        case 5: // N+S
+                        case RoadCellType.Straight_NS: prefabTemplate = tileStraightPrefab; rotY = 0f; shapeTypeStr = "Straight"; break;
+                        case RoadCellType.Straight_EW: prefabTemplate = tileStraightPrefab; rotY = 90f; shapeTypeStr = "Straight"; break;
+
+                        case RoadCellType.Corner_SE: prefabTemplate = tileCornerPrefab; rotY = 0f; shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_NE: prefabTemplate = tileCornerPrefab; rotY = -90f; shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_NW: prefabTemplate = tileCornerPrefab; rotY = 180f; shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_SW: prefabTemplate = tileCornerPrefab; rotY = 90f; shapeTypeStr = "Corner"; break;
+
+                        case RoadCellType.InnerCorner_SE: prefabTemplate = tileInnerCornerPrefab; rotY = 0f; shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_NE: prefabTemplate = tileInnerCornerPrefab; rotY = -90f; shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_NW: prefabTemplate = tileInnerCornerPrefab; rotY = 180f; shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_SW: prefabTemplate = tileInnerCornerPrefab; rotY = 90f; shapeTypeStr = "InnerCorner"; break;
+
+                        case RoadCellType.TJunction_E: prefabTemplate = tileTJunctionPrefab; rotY = 0f; shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_S: prefabTemplate = tileTJunctionPrefab; rotY = 90f; shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_W: prefabTemplate = tileTJunctionPrefab; rotY = 180f; shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_N: prefabTemplate = tileTJunctionPrefab; rotY = -90f; shapeTypeStr = "TJunction"; break;
+
+                        case RoadCellType.Cross: prefabTemplate = tileCrossPrefab; rotY = 0f; shapeTypeStr = "Cross"; break;
+
+                        case RoadCellType.DeadEnd_N: prefabTemplate = tileDeadEndPrefab; rotY = 0f; shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_E: prefabTemplate = tileDeadEndPrefab; rotY = 90f; shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_S: prefabTemplate = tileDeadEndPrefab; rotY = 180f; shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_W: prefabTemplate = tileDeadEndPrefab; rotY = -90f; shapeTypeStr = "DeadEnd"; break;
+
+                        case RoadCellType.BusStop:
+                            prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
+                            bool e = HasRoad(x + 1, y);
+                            bool w = HasRoad(x - 1, y);
+                            rotY = (e || w) ? 90f : 0f;
+                            shapeTypeStr = "BusStop";
+                            break;
+
+                        case RoadCellType.Crosswalk_NS: prefabTemplate = tileCrosswalkPrefab; rotY = 0f; shapeTypeStr = "Crosswalk"; break;
+                        case RoadCellType.Crosswalk_EW: prefabTemplate = tileCrosswalkPrefab; rotY = 90f; shapeTypeStr = "Crosswalk"; break;
+
+                        case RoadCellType.GenericRoad:
                             prefabTemplate = tileStraightPrefab; rotY = 0f; shapeTypeStr = "Straight"; break;
-                        case 2: // E
-                        case 8: // W
-                        case 10: // E+W
-                            prefabTemplate = tileStraightPrefab; rotY = 90f; shapeTypeStr = "Straight"; break;
-
-                        // Corners 
-                        case 6: // S+E
-                            prefabTemplate = tileCornerPrefab; rotY = 0f; shapeTypeStr = "Corner"; break;
-                        case 3: // N+E
-                            prefabTemplate = tileCornerPrefab; rotY = -90f; shapeTypeStr = "Corner"; break;
-                        case 9: // N+W
-                            prefabTemplate = tileCornerPrefab; rotY = 180f; shapeTypeStr = "Corner"; break;
-                        case 12: // S+W
-                            prefabTemplate = tileCornerPrefab; rotY = 90f; shapeTypeStr = "Corner"; break;
-
-                        // T-Junctions
-                        case 7: // N+E+S
-                            prefabTemplate = tileTJunctionPrefab; rotY = 0f; shapeTypeStr = "TJunction"; break;
-                        case 14: // E+S+W
-                            prefabTemplate = tileTJunctionPrefab; rotY = 90f; shapeTypeStr = "TJunction"; break;
-                        case 13: // S+W+N
-                            prefabTemplate = tileTJunctionPrefab; rotY = 180f; shapeTypeStr = "TJunction"; break;
-                        case 11: // W+N+E
-                            prefabTemplate = tileTJunctionPrefab; rotY = -90f; shapeTypeStr = "TJunction"; break;
-
-                        // Cross
-                        case 15: // All
-                            prefabTemplate = tileCrossPrefab; rotY = 0f; shapeTypeStr = "Cross"; break;
                     }
 
                     Vector3 pos = new Vector3(offsetX + x * tSize, 0, offsetZ + y * tSize);
@@ -130,20 +128,7 @@ namespace BusAway.Gameplay
 #endif
                         tileObj.transform.position = pos;
                         tileObj.transform.eulerAngles = new Vector3(0, rotY, 0);
-                        tileObj.name = $"Tile_{x}_{y}";
-                        
-                        if (cell == RoadCellType.BusStop && tileBusStopPrefab != null)
-                        {
-                            GameObject busStopObj;
-#if UNITY_EDITOR
-                            if (!Application.isPlaying) busStopObj = (GameObject)PrefabUtility.InstantiatePrefab(tileBusStopPrefab, tileObj.transform);
-                            else busStopObj = Instantiate(tileBusStopPrefab, tileObj.transform);
-#else
-                            busStopObj = Instantiate(tileBusStopPrefab, tileObj.transform);
-#endif
-                            busStopObj.transform.localPosition = Vector3.zero;
-                            // Orientation depends on the road direction, assuming orientation matches for now
-                        }
+                        tileObj.name = $"Tile_{x}_{y}_{shapeTypeStr}";
                     }
                     else
                     {
@@ -282,7 +267,7 @@ namespace BusAway.Gameplay
         private bool HasRoad(int x, int y)
         {
             var cell = activeLevelData.GetCell(x, y);
-            return cell == RoadCellType.Road || cell == RoadCellType.BusStop;
+            return cell != RoadCellType.Empty;
         }
 
         [ContextMenu("Clear Map")]

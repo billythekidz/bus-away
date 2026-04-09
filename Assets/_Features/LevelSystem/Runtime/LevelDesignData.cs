@@ -6,8 +6,40 @@ namespace BusAway.Level
     public enum RoadCellType
     {
         Empty = 0,
-        Road = 1,
-        BusStop = 2
+        
+        Straight_NS = 1,
+        Straight_EW = 2,
+        
+        Corner_NE = 3,
+        Corner_NW = 4,
+        Corner_SE = 5,
+        Corner_SW = 6,
+
+        InnerCorner_NE = 7,
+        InnerCorner_NW = 8,
+        InnerCorner_SE = 9,
+        InnerCorner_SW = 10,
+        
+        TJunction_N = 11,
+        TJunction_E = 12,
+        TJunction_S = 13,
+        TJunction_W = 14,
+        
+        Cross = 15,
+        
+        DeadEnd_N = 16,
+        DeadEnd_E = 17,
+        DeadEnd_S = 18,
+        DeadEnd_W = 19,
+
+        BusStop = 20,
+
+        Crosswalk_NS = 21,
+        Crosswalk_EW = 22,
+
+        // Generic types
+        GenericRoad = 99,
+        GenericCrosswalk = 100
     }
 
     [System.Serializable]

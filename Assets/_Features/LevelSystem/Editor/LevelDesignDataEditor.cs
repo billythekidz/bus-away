@@ -10,6 +10,11 @@ namespace BusAway.LevelEditor
     {
         private int randomComplexity = 3;
 
+        private bool IsRoadOrBus(RoadCellType type)
+        {
+            return type != RoadCellType.Empty;
+        }
+
         public override void OnInspectorGUI()
         {
             LevelDesignData data = (LevelDesignData)target;
@@ -31,9 +36,6 @@ namespace BusAway.LevelEditor
                 GUILayout.Space(10);
                 GUILayout.Label("Map Editor (Click to toggle)", EditorStyles.boldLabel);
 
-                // Draw 2D Grid
-                // Y=0 is near camera (bottom of game screen), so we render from Y=0 downward
-                // to match the game's top-down view (Y=gridHeight-1 at top of screen = top of editor)
                 for (int y = 0; y < data.gridHeight; y++)
                 {
                     GUILayout.BeginHorizontal();
@@ -46,22 +48,35 @@ namespace BusAway.LevelEditor
                         string label = ".";
                         Color btnColor = Color.white;
 
-                        if (cell == RoadCellType.Road)
-                        {
-                            label = "▒";
-                            btnColor = new Color(0.3f, 0.3f, 0.3f);
-                        }
-                        else if (cell == RoadCellType.BusStop)
+                        if (cell == RoadCellType.BusStop)
                         {
                             label = "B";
                             btnColor = new Color(0.2f, 0.6f, 1.0f);
+                        }
+                        else if (cell == RoadCellType.GenericCrosswalk || cell == RoadCellType.Crosswalk_NS || cell == RoadCellType.Crosswalk_EW)
+                        {
+                            label = "C";
+                            btnColor = new Color(0.8f, 0.8f, 0.0f);
+                        }
+                        else if (cell != RoadCellType.Empty)
+                        {
+                            label = "▒";
+                            btnColor = new Color(0.3f, 0.3f, 0.3f);
                         }
 
                         GUI.backgroundColor = btnColor;
                         if (GUILayout.Button(label, GUILayout.Width(25), GUILayout.Height(25)))
                         {
-                            // Cycle: Empty -> Road -> Bus Stop -> Empty
-                            data.grid[index] = (RoadCellType)(((int)cell + 1) % 3);
+                            if (cell == RoadCellType.Empty)
+                                data.grid[index] = RoadCellType.GenericRoad;
+                            else if (cell != RoadCellType.BusStop && cell != RoadCellType.GenericCrosswalk && cell != RoadCellType.Crosswalk_NS && cell != RoadCellType.Crosswalk_EW)
+                                data.grid[index] = RoadCellType.BusStop;
+                            else if (cell == RoadCellType.BusStop)
+                                data.grid[index] = RoadCellType.GenericCrosswalk;
+                            else
+                                data.grid[index] = RoadCellType.Empty;
+
+                            UpdateAllRoadTypes(data);
                             EditorUtility.SetDirty(data);
                         }
                     }
@@ -78,6 +93,7 @@ namespace BusAway.LevelEditor
                 if (GUILayout.Button("Generate Random Grid", GUILayout.Height(20)))
                 {
                     GenerateRandomGrid(data, randomComplexity);
+                    UpdateAllRoadTypes(data);
                     EditorUtility.SetDirty(data);
                 }
                 EditorGUILayout.EndHorizontal();
@@ -93,113 +109,110 @@ namespace BusAway.LevelEditor
             }
         }
 
+        private void UpdateAllRoadTypes(LevelDesignData data)
+        {
+            System.Func<int, int, bool> HasRoad = (cx, cy) => {
+                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                return data.grid[cy * data.gridWidth + cx] != RoadCellType.Empty;
+            };
+
+            for (int y = 0; y < data.gridHeight; y++)
+            {
+                for (int x = 0; x < data.gridWidth; x++)
+                {
+                    int index = y * data.gridWidth + x;
+                    RoadCellType current = data.grid[index];
+
+                    if (current == RoadCellType.Empty || current == RoadCellType.BusStop) continue;
+
+                    bool isCrosswalk = (current == RoadCellType.GenericCrosswalk || current == RoadCellType.Crosswalk_NS || current == RoadCellType.Crosswalk_EW);
+
+                    bool n = HasRoad(x, y + 1);
+                    bool e = HasRoad(x + 1, y);
+                    bool s = HasRoad(x, y - 1);
+                    bool w = HasRoad(x - 1, y);
+
+                    // Diagonals for inner corners
+                    bool ne = HasRoad(x + 1, y + 1);
+                    bool se = HasRoad(x + 1, y - 1);
+                    bool sw = HasRoad(x - 1, y - 1);
+                    bool nw = HasRoad(x - 1, y + 1);
+
+                    int mask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
+
+                    RoadCellType newType = isCrosswalk ? RoadCellType.GenericCrosswalk : RoadCellType.GenericRoad;
+
+                    switch (mask)
+                    {
+                        case 0: break; // Unconnected
+                        case 1: newType = RoadCellType.DeadEnd_N; break;
+                        case 2: newType = RoadCellType.DeadEnd_E; break;
+                        case 4: newType = RoadCellType.DeadEnd_S; break;
+                        case 8: newType = RoadCellType.DeadEnd_W; break;
+                        
+                        case 5: newType = isCrosswalk ? RoadCellType.Crosswalk_NS : RoadCellType.Straight_NS; break;
+                        case 10: newType = isCrosswalk ? RoadCellType.Crosswalk_EW : RoadCellType.Straight_EW; break;
+                        
+                        case 3: newType = ne ? RoadCellType.InnerCorner_NE : RoadCellType.Corner_NE; break;
+                        case 6: newType = se ? RoadCellType.InnerCorner_SE : RoadCellType.Corner_SE; break;
+                        case 12: newType = sw ? RoadCellType.InnerCorner_SW : RoadCellType.Corner_SW; break;
+                        case 9: newType = nw ? RoadCellType.InnerCorner_NW : RoadCellType.Corner_NW; break;
+                        
+                        case 11: newType = RoadCellType.TJunction_N; break;
+                        case 7: newType = RoadCellType.TJunction_E; break;
+                        case 14: newType = RoadCellType.TJunction_S; break;
+                        case 13: newType = RoadCellType.TJunction_W; break;
+                        
+                        case 15: newType = RoadCellType.Cross; break;
+                    }
+                    data.grid[index] = newType;
+                }
+            }
+        }
+
         private void GenerateRandomGrid(LevelDesignData data, int complexity)
         {
             // Clear entire grid first
             for (int i = 0; i < data.grid.Length; i++)
                 data.grid[i] = RoadCellType.Empty;
 
-            int minSize = 4;
-            int maxW = Mathf.Max(minSize, data.gridWidth - 2);
-            int maxH = Mathf.Max(minSize, data.gridHeight - 2);
+            // minSize is inversely proportional to complexity (1 -> 6, 5 -> 2)
+            int minSize = Mathf.Max(2, 7 - complexity);
+            
+            RectInt rootArea = new RectInt(0, 0, data.gridWidth, data.gridHeight);
+            RecursiveDivide(data, rootArea, minSize);
 
-            int ringW = Random.Range(minSize, maxW + 1);
-            int ringH = Random.Range(minSize, maxH + 1);
+            // Add border roads to ensure connectivity to edges if desired, 
+            // but for now let's keep it contained.
+        }
 
-            int startX = Random.Range(1, data.gridWidth - ringW + 1);
-            int startY = Random.Range(1, data.gridHeight - ringH + 1);
+        private void RecursiveDivide(LevelDesignData data, RectInt area, int minSize)
+        {
+            if (area.width < minSize * 2 + 1 && area.height < minSize * 2 + 1) return;
 
-            // Draw edges as a continuous path
-            List<Vector2Int> path = new List<Vector2Int>();
-            for (int x = startX; x < startX + ringW - 1; x++) path.Add(new Vector2Int(x, startY));
-            for (int y = startY; y < startY + ringH - 1; y++) path.Add(new Vector2Int(startX + ringW - 1, y));
-            for (int x = startX + ringW - 1; x > startX; x--) path.Add(new Vector2Int(x, startY + ringH - 1));
-            for (int y = startY + ringH - 1; y > startY; y--) path.Add(new Vector2Int(startX, y));
+            bool splitHorizontal = area.height > area.width;
+            if (area.width >= minSize * 2 + 1 && area.height >= minSize * 2 + 1)
+                splitHorizontal = Random.value > 0.5f;
 
-            int deformIters = complexity * 4;
-            while (deformIters-- > 0 && path.Count > 0)
+            if (splitHorizontal)
             {
-                // Find all valid straight segments of length 3 cells
-                List<int> validIndices = new List<int>();
-                for (int i = 0; i < path.Count; i++)
-                {
-                    Vector2Int p0 = path[(i + path.Count - 1) % path.Count];
-                    Vector2Int p2 = path[(i + 1) % path.Count];
-                    if (p0.x == p2.x || p0.y == p2.y) validIndices.Add(i);
-                }
-                if (validIndices.Count == 0) break;
-
-                int pick = validIndices[Random.Range(0, validIndices.Count)];
-                Vector2Int P0 = path[(pick + path.Count - 1) % path.Count];
-                Vector2Int P1 = path[pick];
-                Vector2Int P2 = path[(pick + 1) % path.Count];
-
-                Vector2Int V = P2 - P0;
-                Vector2Int[] normals = new Vector2Int[] { new Vector2Int(V.y / 2, -V.x / 2), new Vector2Int(-V.y / 2, V.x / 2) };
-                Vector2Int N = normals[Random.Range(0, 2)];
-
-                Vector2Int C = P0 + N;
-                Vector2Int M = P1 + N;
-                Vector2Int D = P2 + N;
-
-                // Bounds check with margin
-                if (C.x < 1 || C.x >= data.gridWidth - 1 || C.y < 1 || C.y >= data.gridHeight - 1) continue;
-                if (M.x < 1 || M.x >= data.gridWidth - 1 || M.y < 1 || M.y >= data.gridHeight - 1) continue;
-                if (D.x < 1 || D.x >= data.gridWidth - 1 || D.y < 1 || D.y >= data.gridHeight - 1) continue;
-
-                // Neighbor check
-                System.Func<Vector2Int, int> countNeighbors = (pos) =>
-                {
-                    int c = 0;
-                    foreach (var p in path)
-                    {
-                        if (p == pos) return 100; // Self collision
-                        int dx = Mathf.Abs(p.x - pos.x);
-                        int dy = Mathf.Abs(p.y - pos.y);
-                        if (dx + dy == 1) c++;
-                    }
-                    return c;
-                };
-
-                Vector2Int savedP1 = path[pick];
-                path.RemoveAt(pick);
-
-                if (countNeighbors(C) == 1 && countNeighbors(M) == 0 && countNeighbors(D) == 1)
-                {
-                    path.Insert(pick, D);
-                    path.Insert(pick, M);
-                    path.Insert(pick, C);
-                }
-                else
-                {
-                    path.Insert(pick, savedP1);
-                }
+                if (area.height < minSize * 2 + 1) return;
+                int splitY = Random.Range(area.yMin + minSize, area.yMax - minSize);
+                for (int x = area.xMin; x < area.xMax; x++)
+                    data.grid[splitY * data.gridWidth + x] = RoadCellType.GenericRoad;
+                
+                RecursiveDivide(data, new RectInt(area.x, area.y, area.width, splitY - area.y), minSize);
+                RecursiveDivide(data, new RectInt(area.x, splitY + 1, area.width, area.yMax - (splitY + 1)), minSize);
             }
-
-            // Write path to grid
-            foreach (var p in path)
+            else
             {
-                data.grid[p.y * data.gridWidth + p.x] = RoadCellType.Road;
-            }
+                if (area.width < minSize * 2 + 1) return;
+                int splitX = Random.Range(area.xMin + minSize, area.xMax - minSize);
+                for (int y = area.yMin; y < area.yMax; y++)
+                    data.grid[y * data.gridWidth + splitX] = RoadCellType.GenericRoad;
 
-            // Scatter Bus Stops on straight segments
-            int numBusStops = 1 + complexity;
-            int stopAttempts = 100;
-            while (numBusStops > 0 && stopAttempts-- > 0)
-            {
-                int idx = Random.Range(0, path.Count);
-                Vector2Int b = path[idx];
-
-                if (data.GetCell(b.x, b.y) == RoadCellType.Road)
-                {
-                    Vector2Int prev = path[(idx + path.Count - 1) % path.Count];
-                    Vector2Int next = path[(idx + 1) % path.Count];
-                    if (prev.x == next.x || prev.y == next.y) // Only place on straight roads
-                    {
-                        data.grid[b.y * data.gridWidth + b.x] = RoadCellType.BusStop;
-                        numBusStops--;
-                    }
-                }
+                RecursiveDivide(data, new RectInt(area.x, area.y, splitX - area.x, area.height), minSize);
+                RecursiveDivide(data, new RectInt(splitX + 1, area.y, area.xMax - (splitX + 1), area.height), minSize);
             }
         }
     }

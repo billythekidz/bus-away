@@ -1,6 +1,9 @@
 {
   "dependencies": {
     "com.antigravity.ide": "https://github.com/billythekidz/UnityAntigravityIDE.git",
+    "com.unity.burst": "1.8.18",
+    "com.unity.collections": "2.2.1",
+    "com.unity.mathematics": "1.3.2",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.kyrylokuzyk.primetween": "file:../Assets/Plugins/PrimeTween/internal/com.kyrylokuzyk.primetween.tgz",
     "com.unity.ai.navigation": "2.0.11",
