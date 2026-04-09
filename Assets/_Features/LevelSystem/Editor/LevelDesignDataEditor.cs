@@ -182,8 +182,13 @@ namespace BusAway.LevelEditor
             RectInt rootArea = new RectInt(0, 0, data.gridWidth, data.gridHeight);
             RecursiveDivide(data, rootArea, minSize);
 
-            // Add border roads to ensure connectivity to edges if desired, 
-            // but for now let's keep it contained.
+            // Task 2: Hole Punching (Decimation)
+            float eraseChance = (6 - complexity) * 0.08f; 
+            for (int i = 0; i < data.grid.Length; i++)
+            {
+                if (data.grid[i] == RoadCellType.GenericRoad && Random.value < eraseChance)
+                    data.grid[i] = RoadCellType.Empty;
+            }
         }
 
         private void RecursiveDivide(LevelDesignData data, RectInt area, int minSize)
