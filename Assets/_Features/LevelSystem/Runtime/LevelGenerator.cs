@@ -17,6 +17,7 @@ namespace BusAway.Gameplay
         public GameObject tileCornerPrefab;
         public GameObject tileTJunctionPrefab;
         public GameObject tileCrossPrefab;
+        public GameObject tileBusStopPrefab;
         
         [Header("Buses")]
         public GameObject busPrefab;
@@ -129,6 +130,19 @@ namespace BusAway.Gameplay
                         tileObj.transform.position = pos;
                         tileObj.transform.eulerAngles = new Vector3(0, rotY, 0);
                         tileObj.name = $"Tile_{x}_{y}";
+                        
+                        if (cell == RoadCellType.BusStop && tileBusStopPrefab != null)
+                        {
+                            GameObject busStopObj;
+#if UNITY_EDITOR
+                            if (!Application.isPlaying) busStopObj = (GameObject)PrefabUtility.InstantiatePrefab(tileBusStopPrefab, tileObj.transform);
+                            else busStopObj = Instantiate(tileBusStopPrefab, tileObj.transform);
+#else
+                            busStopObj = Instantiate(tileBusStopPrefab, tileObj.transform);
+#endif
+                            busStopObj.transform.localPosition = Vector3.zero;
+                            // Orientation depends on the road direction, assuming orientation matches for now
+                        }
                     }
                     else
                     {
