@@ -38,7 +38,7 @@ public class DynamicRoad : MonoBehaviour
 
     void Update()
     {
-        // Chạy thẳng trong Editor khi thay đổi thông số
+        // Auto-update in Editor when values change
         if (!Application.isPlaying) 
         {
             GenerateRoad();
@@ -49,98 +49,86 @@ public class DynamicRoad : MonoBehaviour
     {
         if (sharpPoints == null || sharpPoints.Count < 2) return;
 
-        EnsureRenderersSetup();
+        // Clear old generated geometry
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            if (Application.isPlaying) Destroy(transform.GetChild(i).gameObject);
+            else DestroyImmediate(transform.GetChild(i).gameObject);
+        }
 
-        // 1. Tính toán đường cong (local space)
         List<Vector3> smoothedPoints = CalculateSmoothPath();
 
-        // Convert local points sang World Space để truyền cho LineRenderers
-        Vector3[] borderPoints = new Vector3[smoothedPoints.Count];
-        Vector3[] innerPoints = new Vector3[smoothedPoints.Count];
-        for (int i = 0; i < smoothedPoints.Count; i++)
-        {
-            Vector3 worldPos = transform.TransformPoint(smoothedPoints[i]);
-            borderPoints[i] = worldPos;
-            innerPoints[i] = worldPos + new Vector3(0, 0.05f, 0); // Nhấc lõi lên một chút
-        }
+        // 1. Build Border (Thick bottom layer)
+        float currentBorderW = roadWidth + borderThickness * 2;
+        Build3DPath(smoothedPoints, currentBorderW, 0.2f, 0.0f, borderMaterial, "Border");
 
-        // 2. Vẽ viền ngoài (nằm dưới)
-        _borderRenderer.positionCount = borderPoints.Length;
-        _borderRenderer.SetPositions(borderPoints);
-        _borderRenderer.startWidth = roadWidth + borderThickness * 2;
-        _borderRenderer.endWidth = roadWidth + borderThickness * 2;
-
-        // 3. Vẽ lõi đường (nằm trên, nhỏ hơn)
-        _roadRenderer.positionCount = innerPoints.Length;
-        _roadRenderer.SetPositions(innerPoints);
-        _roadRenderer.startWidth = roadWidth;
-        _roadRenderer.endWidth = roadWidth;
+        // 2. Build Core (Slightly narrower and sits on top)
+        Build3DPath(smoothedPoints, roadWidth, 0.25f, 0.05f, roadMaterial, "Core");
     }
 
-    private void EnsureRenderersSetup()
+    private void Build3DPath(List<Vector3> points, float width, float height, float yOffset, Material mat, string prefix)
     {
-        // Setup Border LineRenderer (Chuyển thành Child Object để ko ảnh hưởng Transform gốc)
-        if (_borderRenderer == null)
+        GameObject group = new GameObject($"{prefix}_Group");
+        group.transform.SetParent(this.transform);
+        group.transform.localPosition = Vector3.zero;
+
+        for (int i = 0; i < points.Count - 1; i++)
         {
-            Transform borderT = transform.Find("Road_Border");
-            if (borderT == null)
-            {
-                GameObject borderGo = new GameObject("Road_Border");
-                borderGo.transform.SetParent(transform);
-                borderGo.transform.localPosition = Vector3.zero;
-                borderGo.transform.localRotation = Quaternion.Euler(-90, 0, 0);
-                _borderRenderer = borderGo.AddComponent<LineRenderer>();
-            }
-            else _borderRenderer = borderT.GetComponent<LineRenderer>();
+            Vector3 p1 = points[i];
+            Vector3 p2 = points[i + 1];
+
+            // Ignore overlapping points
+            float distance = Vector3.Distance(p1, p2);
+            if (distance < 0.01f) continue;
+
+            // Create Segment (Cube)
+            GameObject seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            seg.name = $"{prefix}_Segment_{i}";
+            seg.transform.SetParent(group.transform);
+
+            Vector3 center = (p1 + p2) / 2f;
+            center.y = yOffset + height / 2f;
+            seg.transform.localPosition = center;
+
+            Vector3 dir = p2 - p1;
+            seg.transform.localRotation = Quaternion.LookRotation(dir);
+
+            // Scale: X(Width), Y(Height), Z(Length)
+            seg.transform.localScale = new Vector3(width, height, distance);
+            if (mat != null) seg.GetComponent<Renderer>().sharedMaterial = mat;
+
+            // Create Joint (Cylinder) to fill corners perfectly
+            GameObject joint = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            joint.name = $"{prefix}_Joint_{i}";
+            joint.transform.SetParent(group.transform);
             
-            _borderRenderer.useWorldSpace = true;
-            _borderRenderer.numCapVertices = 10;
-            _borderRenderer.numCornerVertices = 5;
-            _borderRenderer.alignment = LineAlignment.TransformZ;
+            Vector3 jPos = p1;
+            jPos.y = yOffset + height / 2f;
+            joint.transform.localPosition = jPos;
+            
+            // Default Cylinder is 2 units tall, diameter 1.
+            // Scale X and Z to width, Y to half height
+            joint.transform.localScale = new Vector3(width, height / 2f, width);
+            if (mat != null) joint.GetComponent<Renderer>().sharedMaterial = mat;
         }
 
-        // Setup Inner Road LineRenderer
-        if (_roadRenderer == null)
+        // Final Cap Joint
+        if (points.Count > 0)
         {
-            Transform innerT = transform.Find("InnerRoad_Fill");
-            if (innerT == null)
-            {
-                GameObject innerGo = new GameObject("InnerRoad_Fill");
-                innerGo.transform.SetParent(transform);
-                innerGo.transform.localPosition = Vector3.zero;
-                innerGo.transform.localRotation = Quaternion.Euler(-90, 0, 0);
-                _roadRenderer = innerGo.AddComponent<LineRenderer>();
-            }
-            else _roadRenderer = innerT.GetComponent<LineRenderer>();
+            GameObject endJoint = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            endJoint.name = $"{prefix}_Joint_End";
+            endJoint.transform.SetParent(group.transform);
             
-            _roadRenderer.useWorldSpace = true;
-            _roadRenderer.numCapVertices = 10;
-            _roadRenderer.numCornerVertices = 5;
-            _roadRenderer.alignment = LineAlignment.TransformZ;
-        }
-
-        // Assign materials if exist
-        if (borderMaterial) _borderRenderer.sharedMaterial = borderMaterial;
-        if (roadMaterial) _roadRenderer.sharedMaterial = roadMaterial;
-        
-        // Khóa cứng Child Rotation để Z-axis của LineRenderer hướng LÊN TRÊN (Up Vector)
-        // Rotation (-90, 0, 0) nghĩa là Z-axis (Forward) bị ngửa lên trời (Top-down)
-        _borderRenderer.transform.localRotation = Quaternion.Euler(-90, 0, 0);
-        _roadRenderer.transform.localRotation = Quaternion.Euler(-90, 0, 0);
-        
-        _borderRenderer.alignment = LineAlignment.TransformZ;
-        _roadRenderer.alignment = LineAlignment.TransformZ;
-
-        // Xóa cảnh báo từ bản cũ nếu LineRenderer còn dính trên GameObject gốc
-        LineRenderer oldSelfRenderer = GetComponent<LineRenderer>();
-        if (oldSelfRenderer != null)
-        {
-            oldSelfRenderer.enabled = false; // Tắt tạm thời tránh lỗi, người dùng có thể Remove manually
+            Vector3 jPos = points[points.Count - 1];
+            jPos.y = yOffset + height / 2f;
+            endJoint.transform.localPosition = jPos;
+            endJoint.transform.localScale = new Vector3(width, height / 2f, width);
+            if (mat != null) endJoint.GetComponent<Renderer>().sharedMaterial = mat;
         }
     }
 
     /// <summary>
-    /// Chuyển mảng điểm vuông góc thành đường cong chuẩn Quadratic Bezier
+    /// Converts sharp corner points into a smoothed Quadratic Bezier curve
     /// </summary>
     public List<Vector3> CalculateSmoothPath()
     {
@@ -152,7 +140,7 @@ public class DynamicRoad : MonoBehaviour
 
             if (i == 0 || i == sharpPoints.Count - 1)
             {
-                path.Add(current); // Điểm đầu và cuối giữ nguyên
+                path.Add(current); // Preserve start and end nodes
                 continue;
             }
 
@@ -162,7 +150,7 @@ public class DynamicRoad : MonoBehaviour
             Vector3 dirPrev = (prev - current).normalized;
             Vector3 dirNext = (next - current).normalized;
 
-            // Xài CornerRadius, nhưng giới hạn không để cung tròn vượt quá nửa đoạn đường nối
+            // Cap CornerRadius so curve segment doesn't overlap onto next joints
             float distPrev = Vector3.Distance(prev, current);
             float distNext = Vector3.Distance(next, current);
             float actualRadius = Mathf.Min(cornerRadius, distPrev / 2.01f, distNext / 2.01f);
@@ -170,7 +158,7 @@ public class DynamicRoad : MonoBehaviour
             Vector3 curveStart = current + dirPrev * actualRadius;
             Vector3 curveEnd = current + dirNext * actualRadius;
 
-            // Chèn cung nội suy
+            // Insert interpolated curve nodes
             for (int s = 0; s <= cornerSegments; s++)
             {
                 float t = s / (float)cornerSegments;
@@ -192,7 +180,7 @@ public class DynamicRoad : MonoBehaviour
         return p;
     }
 
-    // Vẽ Handle ra Scene View để dễ thiết kế
+    // Draw Handles in Scene View for visual editing
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;

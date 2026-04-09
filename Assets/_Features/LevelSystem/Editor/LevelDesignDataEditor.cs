@@ -10,7 +10,7 @@ namespace BusAway.LevelEditor
     {
         public override void OnInspectorGUI()
         {
-            // Nút bấm to, rõ ràng
+            // Big, clear button
             GUIStyle buttonStyle = new GUIStyle(GUI.skin.button);
             buttonStyle.fontStyle = FontStyle.Bold;
             buttonStyle.normal.textColor = new Color(0.2f, 0.8f, 0.2f);
@@ -23,7 +23,7 @@ namespace BusAway.LevelEditor
             
             GUILayout.Space(15);
             
-            // Vẽ giao diện mặc định bên dưới
+            // Draw the default inspector below the button
             DrawDefaultInspector();
         }
 
@@ -35,16 +35,17 @@ namespace BusAway.LevelEditor
             data.roadSegments.Clear();
             data.buses.Clear();
             
-            // Định dạng từ Docs/GameDesign: Mạng lưới thường có MỘT NHÁNH ĐƯỜNG CHÍNH (Loop/U-Shape) 
-            // và CÁC NGÁCH ĐỖ XE (Parking Branches) vuông góc trỏ ra ngoài.
+            // Architecture based on GameDesign Docs: 
+            // The map grid usually has ONE MAIN RING (Loop/U-Shape)
+            // and PARKING BRANCHES sticking outwards at right angles.
 
             // ============================================
-            // 1. Tạo Đường Chính (Main Loop hình chữ nhật)
+            // 1. Create Main Road (Rectangular Main Loop)
             // ============================================
             float width = Random.Range(6.0f, 10.0f);
             float depth = Random.Range(4.0f, 8.0f);
             
-            // Tạo lưới tròn
+            // Create ring nodes
             Vector3 topLeft = new Vector3(-width, 0, depth);
             Vector3 topRight = new Vector3(width, 0, depth);
             Vector3 botRight = new Vector3(width, 0, -depth);
@@ -61,12 +62,12 @@ namespace BusAway.LevelEditor
             data.roadSegments.Add(mainRoad);
 
             // ============================================
-            // 2. Tạo Các Ngách Đỗ Xe Buýt (Parking Branches)
+            // 2. Create Parking Branches
             // ============================================
             int numParkingBranches = Random.Range(4, 9);
             List<Vector3> usedOrigins = new List<Vector3>();
             
-            Color[] busColors = new Color[] { Color.red, Color.blue, Color.yellow, Color.green, new Color(0.5f, 0, 0.5f) /* Tím */ };
+            Color[] busColors = new Color[] { Color.red, Color.blue, Color.yellow, Color.green, new Color(0.5f, 0, 0.5f) /* Purple */ };
 
             for (int i = 0; i < numParkingBranches; i++)
             {
@@ -74,7 +75,7 @@ namespace BusAway.LevelEditor
                 Vector3 origin = Vector3.zero;
                 Vector3 direction = Vector3.forward;
 
-                // Chọn random 1 điểm trên trục để đâm nhánh ra ngoài
+                // Choose a random point on the selected axis to extend the branch outwards
                 if (edge == 0) // Top
                 {
                     origin = new Vector3(Mathf.Round(Random.Range(-width + 2, width - 2) / 2f) * 2f, 0, depth);
@@ -96,7 +97,7 @@ namespace BusAway.LevelEditor
                     direction = Vector3.left;
                 }
 
-                // Chống đè điểm: Quá gần điểm tạo nhánh cũ thì bỏ qua
+                // Prevent overlaps: Skip if too close to an existing branch origin
                 bool isOverlap = false;
                 foreach(var uo in usedOrigins)
                 {
@@ -109,7 +110,7 @@ namespace BusAway.LevelEditor
                 float branchLength = Random.Range(3.5f, 5.5f);
                 Vector3 endPoint = origin + direction * branchLength;
 
-                // Tạo nhánh đường ghép vuông góc nối vào Main Loop
+                // Create branch road linking perpendicularly to the Main Loop
                 RoadSegmentData branch = new RoadSegmentData
                 {
                     segmentName = $"Parking Branch {data.roadSegments.Count}",
@@ -121,24 +122,24 @@ namespace BusAway.LevelEditor
                 data.roadSegments.Add(branch);
 
                 // ============================================
-                // 3. Tự động Setup ngẫu nhiên luôn 1 Xe Buýt trên nhánh này
+                // 3. Automatically spawn a Bus on this branch
                 // ============================================
                 BusSpawnData newBus = new BusSpawnData
                 {
                     busID = $"Bus_{data.buses.Count + 1}",
-                    spawnPosition = origin + direction * (branchLength * 0.6f), // Đỗ lùi vào ngách
-                    eulerAngles = Quaternion.LookRotation(-direction).eulerAngles, // Xe quay đầu nhìn ra đường chính
+                    spawnPosition = origin + direction * (branchLength * 0.6f), // Parked backwards in the branch
+                    eulerAngles = Quaternion.LookRotation(-direction).eulerAngles, // Bus facing towards the main road
                     busColor = busColors[Random.Range(0, busColors.Length)],
                     capacity = 3
                 };
                 data.buses.Add(newBus);
             }
 
-            // Gắn cờ Dirty để Scriptable Object lưu xuống đĩa cứng
+            // Mark as dirty to ensure Scriptable Object saves to disk
             EditorUtility.SetDirty(data);
             AssetDatabase.SaveAssets();
             
-            Debug.Log($"<color=green>✓ Generate Thành Công!</color> Đã tạo Loop Map cùng {data.roadSegments.Count - 1} bãi đỗ xe.");
+            Debug.Log($"<color=green>✓ Generate Successful!</color> Created Loop Map with {data.roadSegments.Count - 1} parking branches.");
         }
     }
 }

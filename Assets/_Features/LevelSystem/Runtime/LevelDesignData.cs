@@ -8,16 +8,16 @@ namespace BusAway.Level
     {
         public string segmentName = "Road Segment";
         
-        [Tooltip("Các góc vuông (sharp corners) để nội suy ra đường cong")]
+        [Tooltip("Sharp corners used to interpolate the curved path")]
         public List<Vector3> sharpPoints = new List<Vector3>();
         
-        [Tooltip("Độ rộng của đoạn đường này")]
+        [Tooltip("Width of this specific road segment")]
         public float roadWidth = 2.0f;
         
-        [Tooltip("Bán kính bo góc cực đại")]
+        [Tooltip("Maximum cornering radius")]
         public float cornerRadius = 1.5f;
 
-        [Tooltip("Là vòng lặp kín khép góc cuối hay không (tuỳ chọn nâng cấp sau)")]
+        [Tooltip("Whether this is a closed loop tying start to end (for future enhancements)")]
         public bool isClosedLoop = false;
     }
 
@@ -35,17 +35,17 @@ namespace BusAway.Level
     public class LevelDesignData : ScriptableObject
     {
         [Header("Road Network Layout")]
-        [Tooltip("Danh sách các đoạn đường tạo nên toàn bộ map lưới (ngã ba, bãi đỗ...)")]
+        [Tooltip("List of road segments constructing the map grid (parking lots, junctions...)")]
         public List<RoadSegmentData> roadSegments = new List<RoadSegmentData>();
 
         [Header("Gameplay Config")]
-        [Tooltip("Số tiền hoặc mục tiêu cần đạt để qua màn")]
+        [Tooltip("Target coins or goal to clear the level")]
         public int levelGoalCoin = 160;
 
-        [Tooltip("Cấu hình danh sách xe buýt đang đậu trong bãi")]
+        [Tooltip("Configuration of parked buses")]
         public List<BusSpawnData> buses = new List<BusSpawnData>();
         
-        [Tooltip("Mảng quy định danh sách hàng đợi hành khách (Passenger Queue) spawn theo thứ tự")]
+        [Tooltip("Spawn order sequence for the Passenger Queue array")]
         public List<Color> passengerQueueOrder = new List<Color>();
     }
 }
