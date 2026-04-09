@@ -189,6 +189,37 @@ namespace BusAway.LevelEditor
                 if (data.grid[i] == RoadCellType.GenericRoad && Random.value < eraseChance)
                     data.grid[i] = RoadCellType.Empty;
             }
+
+            // Task 3: Scatter POIs
+            int attempts = 100;
+            int numBusStops = 1 + complexity;
+            int numCrosswalks = 1 + complexity;
+            
+            while ((numBusStops > 0 || numCrosswalks > 0) && attempts-- > 0)
+            {
+                int x = Random.Range(1, data.gridWidth - 1);
+                int y = Random.Range(1, data.gridHeight - 1);
+                int idx = y * data.gridWidth + x;
+                
+                if (data.grid[idx] == RoadCellType.GenericRoad)
+                {
+                    bool n = data.GetCell(x, y + 1) != RoadCellType.Empty;
+                    bool s = data.GetCell(x, y - 1) != RoadCellType.Empty;
+                    bool e = data.GetCell(x + 1, y) != RoadCellType.Empty;
+                    bool w = data.GetCell(x - 1, y) != RoadCellType.Empty;
+                    
+                    if ((n && s && !e && !w) || (e && w && !n && !s))
+                    {
+                        if (numBusStops > 0) {
+                            data.grid[idx] = RoadCellType.BusStop;
+                            numBusStops--;
+                        } else if (numCrosswalks > 0) {
+                            data.grid[idx] = RoadCellType.GenericCrosswalk;
+                            numCrosswalks--;
+                        }
+                    }
+                }
+            }
         }
 
         private void RecursiveDivide(LevelDesignData data, RectInt area, int minSize)
