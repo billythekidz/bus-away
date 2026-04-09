@@ -1,7 +1,7 @@
 {
     "dotnet.defaultSolution": "bus-away.sln",
     "dotnet.dotnetPath": "C:/Program Files/dotnet/dotnet.exe",
-    "dotrush.roslyn.dotnetSdkDirectory": "C:/Program Files/dotnet/sdk/10.0.103",
+    "dotrush.roslyn.dotnetSdkDirectory": "C:/Program Files/dotnet/sdk/10.0.104",
     "dotrush.msbuildProperties": {
         "DefineConstants": "UNITY_EDITOR"
     },
