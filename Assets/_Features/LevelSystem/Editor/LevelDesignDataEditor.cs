@@ -33,8 +33,9 @@ namespace BusAway.LevelEditor
                 GUILayout.Label("Map Editor (Click to toggle)", EditorStyles.boldLabel);
                 
                 // Draw 2D Grid
-                // Y=0 is bottom, so we render from Y=height-1 down to 0
-                for (int y = data.gridHeight - 1; y >= 0; y--)
+                // Y=0 is near camera (bottom of game screen), so we render from Y=0 downward
+                // to match the game's top-down view (Y=gridHeight-1 at top of screen = top of editor)
+                for (int y = 0; y < data.gridHeight; y++)
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
