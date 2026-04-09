@@ -108,44 +108,93 @@ namespace BusAway.LevelEditor
             int startX = Random.Range(1, data.gridWidth - ringW + 1);
             int startY = Random.Range(1, data.gridHeight - ringH + 1);
 
-            // Draw horizontal edges
-            for (int x = startX; x < startX + ringW; x++)
-            {
-                data.grid[startY * data.gridWidth + x] = RoadCellType.Road;
-                data.grid[(startY + ringH - 1) * data.gridWidth + x] = RoadCellType.Road;
-            }
+            // Draw edges as a continuous path
+            List<Vector2Int> path = new List<Vector2Int>();
+            for (int x = startX; x < startX + ringW - 1; x++) path.Add(new Vector2Int(x, startY));
+            for (int y = startY; y < startY + ringH - 1; y++) path.Add(new Vector2Int(startX + ringW - 1, y));
+            for (int x = startX + ringW - 1; x > startX; x--) path.Add(new Vector2Int(x, startY + ringH - 1));
+            for (int y = startY + ringH - 1; y > startY; y--) path.Add(new Vector2Int(startX, y));
 
-            // Draw vertical edges
-            for (int y = startY; y < startY + ringH; y++)
+            int deformIters = complexity * 4;
+            while(deformIters-- > 0 && path.Count > 0) 
             {
-                data.grid[y * data.gridWidth + startX] = RoadCellType.Road;
-                data.grid[y * data.gridWidth + (startX + ringW - 1)] = RoadCellType.Road;
-            }
-
-            // Scatter some Bus Stops based on complexity
-            int numBusStops = 1 + complexity;
-            for(int i=0; i<numBusStops; i++)
-            {
-                int attempts = 100;
-                while(attempts > 0)
+                // Find all valid straight segments of length 3 cells
+                List<int> validIndices = new List<int>();
+                for(int i = 0; i < path.Count; i++) 
                 {
-                    attempts--;
-                    int bx = Random.Range(startX, startX + ringW);
-                    int by = Random.Range(startY, startY + ringH);
-                    
-                    if (data.GetCell(bx, by) == RoadCellType.Road)
+                    Vector2Int p0 = path[(i + path.Count - 1) % path.Count];
+                    Vector2Int p2 = path[(i + 1) % path.Count];
+                    if (p0.x == p2.x || p0.y == p2.y) validIndices.Add(i);
+                }
+                if (validIndices.Count == 0) break;
+                
+                int pick = validIndices[Random.Range(0, validIndices.Count)];
+                Vector2Int P0 = path[(pick + path.Count - 1) % path.Count];
+                Vector2Int P1 = path[pick];
+                Vector2Int P2 = path[(pick + 1) % path.Count];
+                
+                Vector2Int V = P2 - P0;
+                Vector2Int[] normals = new Vector2Int[] { new Vector2Int(V.y/2, -V.x/2), new Vector2Int(-V.y/2, V.x/2) };
+                Vector2Int N = normals[Random.Range(0, 2)];
+                
+                Vector2Int C = P0 + N;
+                Vector2Int M = P1 + N;
+                Vector2Int D = P2 + N;
+                
+                // Bounds check with margin
+                if (C.x < 1 || C.x >= data.gridWidth-1 || C.y < 1 || C.y >= data.gridHeight-1) continue;
+                if (M.x < 1 || M.x >= data.gridWidth-1 || M.y < 1 || M.y >= data.gridHeight-1) continue;
+                if (D.x < 1 || D.x >= data.gridWidth-1 || D.y < 1 || D.y >= data.gridHeight-1) continue;
+                
+                // Neighbor check
+                System.Func<Vector2Int, int> countNeighbors = (pos) => {
+                    int c = 0;
+                    foreach(var p in path) {
+                        if (p == pos) return 100; // Self collision
+                        int dx = Mathf.Abs(p.x - pos.x);
+                        int dy = Mathf.Abs(p.y - pos.y);
+                        if (dx + dy == 1) c++;
+                    }
+                    return c;
+                };
+                
+                Vector2Int savedP1 = path[pick];
+                path.RemoveAt(pick);
+                
+                if (countNeighbors(C) == 1 && countNeighbors(M) == 0 && countNeighbors(D) == 1) 
+                {
+                    path.Insert(pick, D);
+                    path.Insert(pick, M);
+                    path.Insert(pick, C);
+                } 
+                else 
+                {
+                    path.Insert(pick, savedP1);
+                }
+            }
+            
+            // Write path to grid
+            foreach(var p in path) 
+            {
+                data.grid[p.y * data.gridWidth + p.x] = RoadCellType.Road;
+            }
+
+            // Scatter Bus Stops on straight segments
+            int numBusStops = 1 + complexity;
+            int stopAttempts = 100;
+            while(numBusStops > 0 && stopAttempts-- > 0)
+            {
+                int idx = Random.Range(0, path.Count);
+                Vector2Int b = path[idx];
+                
+                if (data.GetCell(b.x, b.y) == RoadCellType.Road)
+                {
+                    Vector2Int prev = path[(idx + path.Count - 1) % path.Count];
+                    Vector2Int next = path[(idx + 1) % path.Count];
+                    if (prev.x == next.x || prev.y == next.y) // Only place on straight roads
                     {
-                        // Ensure corners are not bus stops
-                        bool isCorner = (bx == startX && by == startY) ||
-                                        (bx == startX && by == startY + ringH - 1) ||
-                                        (bx == startX + ringW - 1 && by == startY) ||
-                                        (bx == startX + ringW - 1 && by == startY + ringH - 1);
-                        
-                        if (!isCorner)
-                        {
-                            data.grid[by * data.gridWidth + bx] = RoadCellType.BusStop;
-                            break;
-                        }
+                        data.grid[b.y * data.gridWidth + b.x] = RoadCellType.BusStop;
+                        numBusStops--;
                     }
                 }
             }
