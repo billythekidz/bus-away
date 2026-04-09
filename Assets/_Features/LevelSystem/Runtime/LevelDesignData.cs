@@ -3,36 +3,11 @@ using UnityEngine;
 
 namespace BusAway.Level
 {
-    /// <summary>
-    /// Defines the role of each road segment in the level layout.
-    /// - MainRoad: Ring road or main connecting road, no bus stop at the end.
-    /// - ParkingBranch: A short offshoot connected to the main ring where a bus parks.
-    /// </summary>
-    public enum RoadSegmentType
+    public enum RoadCellType
     {
-        MainRoad,
-        ParkingBranch,
-    }
-
-    [System.Serializable]
-    public class RoadSegmentData
-    {
-        public string segmentName = "Road Segment";
-
-        [Tooltip("MainRoad = plain road with corners. ParkingBranch = offshoot with a bus slot at the end.")]
-        public RoadSegmentType segmentType = RoadSegmentType.MainRoad;
-
-        [Tooltip("Sharp corners used to interpolate the curved path")]
-        public List<Vector3> sharpPoints = new List<Vector3>();
-
-        [Tooltip("Width of this road segment")]
-        public float roadWidth = 2.0f;
-
-        [Tooltip("Maximum corner rounding radius")]
-        public float cornerRadius = 1.5f;
-
-        [Tooltip("Whether this road forms a closed loop (e.g. ring road)")]
-        public bool isClosedLoop = false;
+        Empty = 0,
+        Road = 1,
+        BusStop = 2
     }
 
     [System.Serializable]
@@ -40,8 +15,10 @@ namespace BusAway.Level
     {
         public string busID;
 
-        [Tooltip("World-space spawn position for the bus")]
-        public Vector3 spawnPosition;
+        [Tooltip("Grid X coordinate for spawn")]
+        public int gridX;
+        [Tooltip("Grid Y coordinate for spawn")]
+        public int gridY;
 
         [Tooltip("Euler angles (rotation) for the bus at spawn")]
         public Vector3 eulerAngles;
@@ -56,20 +33,40 @@ namespace BusAway.Level
     [CreateAssetMenu(fileName = "Level_001", menuName = "Bus Away/Level Design Data")]
     public class LevelDesignData : ScriptableObject
     {
-        [Header("Road Network Layout")]
-        [Tooltip("All road segments in this level: one MainRoad ring + N ParkingBranch offshoots")]
-        public List<RoadSegmentData> roadSegments = new List<RoadSegmentData>();
+        [Header("Grid Config")]
+        public int gridWidth = 10;
+        public int gridHeight = 10;
+        public float tileSize = 2f; 
+        
+        [HideInInspector]
+        public RoadCellType[] grid; // Array size: width * height
 
         [Header("Gameplay Config")]
         [Tooltip("Score target to clear this level")]
         public int levelGoalCoin = 160;
 
         [Header("Buses")]
-        [Tooltip("One entry per ParkingBranch — position should match the end of the branch")]
         public List<BusSpawnData> buses = new List<BusSpawnData>();
 
         [Header("Passenger Queue")]
         [Tooltip("Ordered list of passenger colors to spawn during gameplay")]
         public List<Color> passengerQueueOrder = new List<Color>();
+
+        public RoadCellType GetCell(int x, int y)
+        {
+            if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return RoadCellType.Empty;
+            if (grid == null || grid.Length != gridWidth * gridHeight) return RoadCellType.Empty;
+            return grid[y * gridWidth + x];
+        }
+
+        public void SetCell(int x, int y, RoadCellType type)
+        {
+            if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return;
+            if (grid == null || grid.Length != gridWidth * gridHeight)
+            {
+                grid = new RoadCellType[gridWidth * gridHeight];
+            }
+            grid[y * gridWidth + x] = type;
+        }
     }
 }

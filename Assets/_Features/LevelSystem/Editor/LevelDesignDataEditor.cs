@@ -1,146 +1,185 @@
 using UnityEngine;
 using UnityEditor;
 using BusAway.Level;
-using System.Collections.Generic;
 
 namespace BusAway.LevelEditor
 {
     [CustomEditor(typeof(LevelDesignData))]
     public class LevelDesignDataEditor : Editor
     {
+        private int randomComplexity = 3;
+
         public override void OnInspectorGUI()
         {
-            // Big, clear button
-            GUIStyle buttonStyle = new GUIStyle(GUI.skin.button);
-            buttonStyle.fontStyle = FontStyle.Bold;
-            buttonStyle.normal.textColor = new Color(0.2f, 0.8f, 0.2f);
-            buttonStyle.fixedHeight = 40;
+            LevelDesignData data = (LevelDesignData)target;
 
-            if (GUILayout.Button("🎲 Generate Random Road Map (Buses Away Style)", buttonStyle))
+            GUILayout.Label("Map Level Configuration", EditorStyles.boldLabel);
+            data.gridWidth = EditorGUILayout.IntSlider("Grid Width", data.gridWidth, 4, 30);
+            data.gridHeight = EditorGUILayout.IntSlider("Grid Height", data.gridHeight, 4, 30);
+            data.tileSize = EditorGUILayout.FloatField("Tile Size", data.tileSize);
+
+            if (data.grid == null || data.grid.Length != data.gridWidth * data.gridHeight)
             {
-                GenerateRandomRoadMap();
+                if (GUILayout.Button("Initialize / Reset Grid", GUILayout.Height(30)))
+                {
+                    data.grid = new RoadCellType[data.gridWidth * data.gridHeight];
+                    EditorUtility.SetDirty(data);
+                }
             }
-            
+            else
+            {
+                GUILayout.Space(10);
+                GUILayout.Label("Map Editor (Click to toggle)", EditorStyles.boldLabel);
+                
+                // Draw 2D Grid
+                // Y=0 is bottom, so we render from Y=height-1 down to 0
+                for (int y = data.gridHeight - 1; y >= 0; y--)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.FlexibleSpace();
+                    for (int x = 0; x < data.gridWidth; x++)
+                    {
+                        int index = y * data.gridWidth + x;
+                        RoadCellType cell = data.grid[index];
+
+                        string label = ".";
+                        Color btnColor = Color.white;
+                        
+                        if (cell == RoadCellType.Road) 
+                        {
+                            label = "▒";
+                            btnColor = new Color(0.3f, 0.3f, 0.3f);
+                        }
+                        else if (cell == RoadCellType.BusStop)
+                        {
+                            label = "B";
+                            btnColor = new Color(0.2f, 0.6f, 1.0f);
+                        }
+
+                        GUI.backgroundColor = btnColor;
+                        if (GUILayout.Button(label, GUILayout.Width(25), GUILayout.Height(25)))
+                        {
+                            // Cycle: Empty -> Road -> Bus Stop -> Empty
+                            data.grid[index] = (RoadCellType)(((int)cell + 1) % 3);
+                            EditorUtility.SetDirty(data);
+                        }
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                }
+                GUI.backgroundColor = Color.white;
+
+                GUILayout.Space(20);
+                GUILayout.Label("Random Generator", EditorStyles.boldLabel);
+                
+                EditorGUILayout.BeginHorizontal();
+                randomComplexity = EditorGUILayout.IntSlider("Complexity", randomComplexity, 1, 5);
+                if (GUILayout.Button("Generate Random Grid", GUILayout.Height(20)))
+                {
+                    GenerateRandomGrid(data, randomComplexity);
+                    EditorUtility.SetDirty(data);
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+
             GUILayout.Space(15);
-            
-            // Draw the default inspector below the button
             DrawDefaultInspector();
+
+            if (GUI.changed)
+            {
+                EditorUtility.SetDirty(data);
+                AssetDatabase.SaveAssets();
+            }
         }
 
-        private void GenerateRandomRoadMap()
+        private void GenerateRandomGrid(LevelDesignData data, int complexity)
         {
-            LevelDesignData data = (LevelDesignData)target;
-            Undo.RecordObject(data, "Generate Random Road Map");
+            // Clear entire grid first
+            for (int i = 0; i < data.grid.Length; i++)
+                data.grid[i] = RoadCellType.Empty;
 
-            data.roadSegments.Clear();
-            data.buses.Clear();
+            // Complexity determines the target length of the road
+            int targetLength = (int)(Mathf.Min(data.gridWidth, data.gridHeight) * (1.5f + complexity * 0.8f));
             
-            // Architecture based on GameDesign Docs: 
-            // The map grid usually has ONE MAIN RING (Loop/U-Shape)
-            // and PARKING BRANCHES sticking outwards at right angles.
+            // Random start near the edge
+            int x = Random.Range(2, data.gridWidth - 2);
+            int y = 2; // Start near bottom
 
-            // ============================================
-            // 1. Create Main Road (Rectangular Main Loop)
-            // ============================================
-            float width = Random.Range(6.0f, 10.0f);
-            float depth = Random.Range(4.0f, 8.0f);
-            
-            // Create ring nodes
-            Vector3 topLeft = new Vector3(-width, 0, depth);
-            Vector3 topRight = new Vector3(width, 0, depth);
-            Vector3 botRight = new Vector3(width, 0, -depth);
-            Vector3 botLeft = new Vector3(-width, 0, -depth);
+            data.grid[y * data.gridWidth + x] = RoadCellType.Road;
+            int placed = 1;
 
-            RoadSegmentData mainRoad = new RoadSegmentData
+            int dx = 0; int dy = 1; // Start moving up
+            int stuckCounter = 0;
+
+            while (placed < targetLength && stuckCounter < 50)
             {
-                segmentName = "Main Ring Road",
-                segmentType = RoadSegmentType.MainRoad,
-                cornerRadius = 2.0f,
-                roadWidth = 2.5f,
-                isClosedLoop = true,
-                sharpPoints = new List<Vector3> { botLeft, topLeft, topRight, botRight, botLeft }
-            };
-            data.roadSegments.Add(mainRoad);
-
-            // ============================================
-            // 2. Create Parking Branches
-            // ============================================
-            int numParkingBranches = Random.Range(4, 9);
-            List<Vector3> usedOrigins = new List<Vector3>();
-            
-            Color[] busColors = new Color[] { Color.red, Color.blue, Color.yellow, Color.green, new Color(0.5f, 0, 0.5f) /* Purple */ };
-
-            for (int i = 0; i < numParkingBranches; i++)
-            {
-                // Bottom edge (2) is excluded — it stays as plain road with rounded corners only
-                int edge = Random.Range(0, 3); // 0: Top, 1: Right, 2: Left  (NO bottom)
-                Vector3 origin = Vector3.zero;
-                Vector3 direction = Vector3.forward;
-                string edgeLabel = "";
-
-                if (edge == 0) // Top
+                // Chance to turn
+                float turnChance = 0.2f + (complexity * 0.1f);
+                if (Random.value < turnChance)
                 {
-                    origin = new Vector3(Mathf.Round(Random.Range(-width + 2, width - 2) / 2f) * 2f, 0, depth);
-                    direction = Vector3.forward;
-                    edgeLabel = "[Top]";
-                }
-                else if (edge == 1) // Right
-                {
-                    origin = new Vector3(width, 0, Mathf.Round(Random.Range(-depth + 2, depth - 2) / 2f) * 2f);
-                    direction = Vector3.right;
-                    edgeLabel = "[Right]";
-                }
-                else // Left
-                {
-                    origin = new Vector3(-width, 0, Mathf.Round(Random.Range(-depth + 2, depth - 2) / 2f) * 2f);
-                    direction = Vector3.left;
-                    edgeLabel = "[Left]";
+                    // Turn left or right
+                    if (dx != 0) { dy = Random.value > 0.5f ? 1 : -1; dx = 0; }
+                    else { dx = Random.value > 0.5f ? 1 : -1; dy = 0; }
                 }
 
-                // Prevent overlaps: Skip if too close to an existing branch origin
-                bool isOverlap = false;
-                foreach(var uo in usedOrigins)
+                int nx = x + dx;
+                int ny = y + dy;
+
+                // Check boundaries (keep 1 tile padding)
+                if (nx < 1 || nx >= data.gridWidth - 1 || ny < 1 || ny >= data.gridHeight - 1)
                 {
-                    if (Vector3.Distance(uo, origin) < 2.5f) { isOverlap = true; break; }
+                    // Force a turn
+                    int temp = dx; dx = dy == 0 ? (Random.value > 0.5f ? 1 : -1) : 0; dy = temp == 0 ? (Random.value > 0.5f ? 1 : -1) : 0;
+                    stuckCounter++;
+                    continue;
                 }
-                if (isOverlap) continue;
 
-                usedOrigins.Add(origin);
+                // Try to avoid 2x2 blocks of road (self-intersection prevention)
+                int neighbors = 0;
+                if (data.GetCell(nx+1, ny) != RoadCellType.Empty) neighbors++;
+                if (data.GetCell(nx-1, ny) != RoadCellType.Empty) neighbors++;
+                if (data.GetCell(nx, ny+1) != RoadCellType.Empty) neighbors++;
+                if (data.GetCell(nx, ny-1) != RoadCellType.Empty) neighbors++;
 
-                float branchLength = Random.Range(3.5f, 5.5f);
-                Vector3 endPoint = origin + direction * branchLength;
-
-                // Create branch road linking perpendicularly to the Main Loop
-                RoadSegmentData branch = new RoadSegmentData
+                // If moving to a new cell would touch too many existing roads, skip and turn
+                if (data.GetCell(nx, ny) == RoadCellType.Empty && neighbors >= 2)
                 {
-                    segmentName = $"Parking Branch {data.roadSegments.Count} {edgeLabel}",
-                    segmentType = RoadSegmentType.ParkingBranch,
-                    cornerRadius = 1.0f,
-                    roadWidth = 2.0f,
-                    isClosedLoop = false,
-                    sharpPoints = new List<Vector3> { origin, endPoint }
-                };
-                data.roadSegments.Add(branch);
+                    int temp = dx; dx = dy == 0 ? (Random.value > 0.5f ? 1 : -1) : 0; dy = temp == 0 ? (Random.value > 0.5f ? 1 : -1) : 0;
+                    stuckCounter++;
+                    continue;
+                }
 
-                // ============================================
-                // 3. Automatically spawn a Bus on this branch
-                // ============================================
-                BusSpawnData newBus = new BusSpawnData
+                // Place road
+                if (data.GetCell(nx, ny) == RoadCellType.Empty)
                 {
-                    busID = $"Bus_{data.buses.Count + 1}",
-                    spawnPosition = origin + direction * (branchLength * 0.6f), // Parked backwards in the branch
-                    eulerAngles = Quaternion.LookRotation(-direction).eulerAngles, // Bus facing towards the main road
-                    busColor = busColors[Random.Range(0, busColors.Length)],
-                    capacity = 3
-                };
-                data.buses.Add(newBus);
+                    data.grid[ny * data.gridWidth + nx] = RoadCellType.Road;
+                    placed++;
+                    stuckCounter = 0;
+                }
+                
+                x = nx;
+                y = ny;
             }
 
-            // Mark as dirty to ensure Scriptable Object saves to disk
-            EditorUtility.SetDirty(data);
-            AssetDatabase.SaveAssets();
-            
-            Debug.Log($"<color=green>✓ Generate Successful!</color> Created Loop Map with {data.roadSegments.Count - 1} parking branches.");
+            // Scatter some Bus Stops based on complexity
+            int numBusStops = 1 + (complexity / 2);
+            for(int i=0; i<numBusStops; i++)
+            {
+                int attempts = 100;
+                while(attempts > 0)
+                {
+                    attempts--;
+                    int bx = Random.Range(1, data.gridWidth - 1);
+                    int by = Random.Range(1, data.gridHeight - 1);
+                    
+                    if (data.GetCell(bx, by) == RoadCellType.Road)
+                    {
+                        // Found a road, make it a bus stop
+                        data.grid[by * data.gridWidth + bx] = RoadCellType.BusStop;
+                        break;
+                    }
+                }
+            }
         }
     }
 }
