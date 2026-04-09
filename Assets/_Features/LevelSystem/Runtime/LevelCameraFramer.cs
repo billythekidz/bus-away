@@ -3,77 +3,88 @@ using UnityEngine;
 namespace BusAway.Gameplay
 {
     /// <summary>
-    /// Automatically calculates the combined Bounding Box of the road network and fits it to the screen,
-    /// regardless of device aspect ratio (e.g., iPad 4:3 or iPhone 19.5:9).
+    /// Automatically frames the camera to show the entire level from an isometric 3D perspective.
+    /// Calculates combined bounds of all renderers under the roads root and positions the camera
+    /// at a configurable elevation angle looking at the center.
     /// </summary>
     public class LevelCameraFramer : MonoBehaviour
     {
-        [Header("Framing Settings")]
-        [Tooltip("Margin around the map boundaries to ensure roads do not touch the screen edges (useful for UI padding)")]
+        [Header("3D Framing Settings")]
+        [Tooltip("Extra margin around the level bounds to prevent clipping at screen edges")]
         public float padding = 4f;
 
+        [Tooltip("Elevation angle in degrees (0 = ground level, 90 = top-down)")]
+        [Range(20f, 85f)]
+        public float elevationAngle = 72f;
 
-        [Tooltip("Minimum orthographic size to prevent extreme zooming on small maps")]
-        public float minOrthoSize = 5f;
+        [Tooltip("Horizontal orbit angle in degrees (0 = looking from +Z towards -Z)")]
+        public float orbitAngle = 0f;
 
+        [Tooltip("Extra distance multiplier to pull the camera back")]
+        [Range(1f, 3f)]
+        public float distanceMultiplier = 1.4f;
 
-        [Tooltip("Camera offset when looking down at the map (Top-down view)")]
-        public Vector3 cameraPositionOffset = new Vector3(0, 50f, 0);
+        [Tooltip("Camera field of view for perspective mode (lower = flatter, more orthographic feel)")]
+        public float fieldOfView = 35f;
 
         /// <summary>
-        /// Frame the camera to encapsulate all LineRenderers within the specified root transform.
+        /// Frame the camera to show all 3D geometry within the specified root transform.
+        /// Uses Renderer bounds (works with Cubes, Cylinders, MeshRenderers, etc.)
         /// </summary>
         public void FrameLevel(Transform roadsRoot)
         {
             if (Camera.main == null)
             {
-                Debug.LogWarning("Camera.main not found! Make sure your main camera is tagged as 'MainCamera'.");
+                Debug.LogWarning("[LevelCameraFramer] Camera.main not found! Make sure your main camera is tagged as 'MainCamera'.");
                 return;
             }
 
             Camera cam = Camera.main;
 
-            // 1. Gather all LineRenderers (containing road vertices)
-
-            LineRenderer[] renderers = roadsRoot.GetComponentsInChildren<LineRenderer>();
-            if (renderers.Length == 0) return;
-
-            // 2. Calculate combined Bounding Box of the whole map
-            Bounds totalBounds = renderers[0].bounds;
-            foreach (var lr in renderers)
+            // 1. Gather all Renderers (Cubes, Cylinders, MeshRenderers, etc.)
+            Renderer[] renderers = roadsRoot.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
             {
-                totalBounds.Encapsulate(lr.bounds);
+                Debug.LogWarning("[LevelCameraFramer] No renderers found under roads root.");
+                return;
             }
 
-            // 3. Move Camera to the center of the total X-Z bounds (keeping the top-down Y height)
+            // 2. Calculate combined Bounding Box of the whole level
+            Bounds totalBounds = renderers[0].bounds;
+            foreach (var r in renderers)
+            {
+                totalBounds.Encapsulate(r.bounds);
+            }
+
+            // 3. Calculate required camera distance to fit everything
             Vector3 center = totalBounds.center;
-            cam.transform.position = new Vector3(center.x, cameraPositionOffset.y, center.z);
+            float boundsSize = Mathf.Max(totalBounds.size.x, totalBounds.size.z) + padding;
 
-            // Force standard Top-down Camera rotation and Orthographic projection
+            // Use Perspective projection for true 3D look
+            cam.orthographic = false;
+            cam.fieldOfView = fieldOfView;
 
-            cam.transform.eulerAngles = new Vector3(90f, 0f, 0f);
-            cam.orthographic = true; // Use Orthographic mode for exact bounding calculation
+            // Calculate distance needed to fit the bounds in view
+            float halfFov = cam.fieldOfView * 0.5f * Mathf.Deg2Rad;
+            float distance = (boundsSize * 0.5f) / Mathf.Tan(halfFov);
+            distance *= distanceMultiplier;
 
-            // 4. Measure Screen Aspect Ratio
-            float levelWidth = totalBounds.size.x + padding;
-            float levelHeight = totalBounds.size.z + padding;
+            // 4. Position camera at elevation + orbit angle
+            float elevRad = elevationAngle * Mathf.Deg2Rad;
+            float orbitRad = orbitAngle * Mathf.Deg2Rad;
 
-            float screenAspect = (float)Screen.width / (float)Screen.height;
+            Vector3 cameraOffset = new Vector3(
+                Mathf.Sin(orbitRad) * Mathf.Cos(elevRad) * distance,
+                Mathf.Sin(elevRad) * distance,
+                Mathf.Cos(orbitRad) * Mathf.Cos(elevRad) * distance
+            );
 
-            // Calculate Orthographic Scale for both scenarios:
-            // - Vertical bounds fit (Square/Landscape screens)
-            // - Horizontal bounds fit (Narrow/Portrait screens)
-            float requiredOrthoVertical = levelHeight / 2f;
-            float requiredOrthoHorizontal = (levelWidth / screenAspect) / 2f;
+            cam.transform.position = center + cameraOffset;
 
-            // Take the maximum required size to ensure no clipping on any edge
-            float finalSize = Mathf.Max(requiredOrthoVertical, requiredOrthoHorizontal);
-            finalSize = Mathf.Max(finalSize, minOrthoSize);
+            // 5. Look at the center of the level
+            cam.transform.LookAt(center);
 
-            // Apply to Camera
-            cam.orthographicSize = finalSize;
-
-            Debug.Log($"<color=green>[AutoFramer]</color> Screen Aspect Ratio: {screenAspect:F2}. Ortho Zoom: {finalSize:F1}");
+            Debug.Log($"<color=green>[LevelCameraFramer]</color> 3D Isometric framing complete. Distance: {distance:F1}, Center: {center}");
         }
     }
 }

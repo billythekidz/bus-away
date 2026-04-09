@@ -54,6 +54,7 @@ namespace BusAway.LevelEditor
             RoadSegmentData mainRoad = new RoadSegmentData
             {
                 segmentName = "Main Ring Road",
+                segmentType = RoadSegmentType.MainRoad,
                 cornerRadius = 2.0f,
                 roadWidth = 2.5f,
                 isClosedLoop = true,
@@ -71,30 +72,29 @@ namespace BusAway.LevelEditor
 
             for (int i = 0; i < numParkingBranches; i++)
             {
-                int edge = Random.Range(0, 4); // 0: Top, 1: Right, 2: Bottom, 3: Left
+                // Bottom edge (2) is excluded — it stays as plain road with rounded corners only
+                int edge = Random.Range(0, 3); // 0: Top, 1: Right, 2: Left  (NO bottom)
                 Vector3 origin = Vector3.zero;
                 Vector3 direction = Vector3.forward;
+                string edgeLabel = "";
 
-                // Choose a random point on the selected axis to extend the branch outwards
                 if (edge == 0) // Top
                 {
                     origin = new Vector3(Mathf.Round(Random.Range(-width + 2, width - 2) / 2f) * 2f, 0, depth);
                     direction = Vector3.forward;
+                    edgeLabel = "[Top]";
                 }
                 else if (edge == 1) // Right
                 {
                     origin = new Vector3(width, 0, Mathf.Round(Random.Range(-depth + 2, depth - 2) / 2f) * 2f);
                     direction = Vector3.right;
-                }
-                else if (edge == 2) // Bottom
-                {
-                    origin = new Vector3(Mathf.Round(Random.Range(-width + 2, width - 2) / 2f) * 2f, 0, -depth);
-                    direction = Vector3.back;
+                    edgeLabel = "[Right]";
                 }
                 else // Left
                 {
                     origin = new Vector3(-width, 0, Mathf.Round(Random.Range(-depth + 2, depth - 2) / 2f) * 2f);
                     direction = Vector3.left;
+                    edgeLabel = "[Left]";
                 }
 
                 // Prevent overlaps: Skip if too close to an existing branch origin
@@ -113,7 +113,8 @@ namespace BusAway.LevelEditor
                 // Create branch road linking perpendicularly to the Main Loop
                 RoadSegmentData branch = new RoadSegmentData
                 {
-                    segmentName = $"Parking Branch {data.roadSegments.Count}",
+                    segmentName = $"Parking Branch {data.roadSegments.Count} {edgeLabel}",
+                    segmentType = RoadSegmentType.ParkingBranch,
                     cornerRadius = 1.0f,
                     roadWidth = 2.0f,
                     isClosedLoop = false,

@@ -60,19 +60,18 @@ namespace BusAway.Gameplay
             GameObject roadRoot = new GameObject("RoadsRoot");
             roadRoot.transform.SetParent(this.transform);
 
-            foreach (var roadDesign in activeLevelData.roads)
+            foreach (var roadDesign in activeLevelData.roadSegments)
             {
-                GameObject roadGo = new GameObject($"Road_{roadDesign.id}");
+                GameObject roadGo = new GameObject($"Road_{roadDesign.segmentName}");
                 roadGo.transform.SetParent(roadRoot.transform);
 
                 DynamicRoad dynamicRoad = roadGo.AddComponent<DynamicRoad>();
-                dynamicRoad.roadData = roadDesign;
-                dynamicRoad.roadWidth = 1.0f; // Default grid width
-                dynamicRoad.coreMaterial = roadCoreMaterial;
+                // dynamicRoad.roadWidth is set inside SetupFromData
+                dynamicRoad.roadMaterial = roadCoreMaterial;
                 dynamicRoad.borderMaterial = roadBorderMaterial;
 
-                // Build Geometry
-                dynamicRoad.GenerateRoad();
+                // Sync data and Build Geometry
+                dynamicRoad.SetupFromData(roadDesign);
             }
 
             // 2. Build Buses
@@ -113,7 +112,7 @@ namespace BusAway.Gameplay
                 busObj.transform.eulerAngles = busData.eulerAngles;
             }
             
-            Debug.Log($"<color=cyan>Level Build Complete!</color> Generated {activeLevelData.roads.Count} roads and {activeLevelData.buses.Count} buses.");
+            Debug.Log($"<color=cyan>Level Build Complete!</color> Generated {activeLevelData.roadSegments.Count} roads and {activeLevelData.buses.Count} buses.");
 
             // 3. Auto-Frame Camera
             if (autoFrameCameraOnBuild)
