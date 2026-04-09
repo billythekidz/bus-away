@@ -14,51 +14,55 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BusAway.Level.LevelDesignData
   roadSegments:
   - segmentName: Main Ring Road
+    segmentType: 0
     sharpPoints:
-    - {x: -8.453009, y: 0, z: -4.333686}
-    - {x: -8.453009, y: 0, z: 4.333686}
-    - {x: 8.453009, y: 0, z: 4.333686}
-    - {x: 8.453009, y: 0, z: -4.333686}
-    - {x: -8.453009, y: 0, z: -4.333686}
+    - {x: -7.907378, y: 0, z: -5.5316076}
+    - {x: -7.907378, y: 0, z: 5.5316076}
+    - {x: 7.907378, y: 0, z: 5.5316076}
+    - {x: 7.907378, y: 0, z: -5.5316076}
+    - {x: -7.907378, y: 0, z: -5.5316076}
     roadWidth: 2.5
     cornerRadius: 2
     isClosedLoop: 1
-  - segmentName: Parking Branch 1
+  - segmentName: 'Parking Branch 1 [Right]'
+    segmentType: 1
     sharpPoints:
-    - {x: -4, y: 0, z: 4.333686}
-    - {x: -4, y: 0, z: 9.066385}
+    - {x: 7.907378, y: 0, z: 2}
+    - {x: 12.275166, y: 0, z: 2}
     roadWidth: 2
     cornerRadius: 1
     isClosedLoop: 0
-  - segmentName: Parking Branch 2
+  - segmentName: 'Parking Branch 2 [Left]'
+    segmentType: 1
     sharpPoints:
-    - {x: 2, y: 0, z: -4.333686}
-    - {x: 2, y: 0, z: -8.203279}
+    - {x: -7.907378, y: 0, z: -0}
+    - {x: -12.1923685, y: 0, z: 0}
     roadWidth: 2
     cornerRadius: 1
     isClosedLoop: 0
-  - segmentName: Parking Branch 3
+  - segmentName: 'Parking Branch 3 [Left]'
+    segmentType: 1
     sharpPoints:
-    - {x: -8.453009, y: 0, z: 0}
-    - {x: -13.925472, y: 0, z: 0}
+    - {x: -7.907378, y: 0, z: -4}
+    - {x: -12.557926, y: 0, z: -4}
     roadWidth: 2
     cornerRadius: 1
     isClosedLoop: 0
   levelGoalCoin: 160
   buses:
   - busID: Bus_1
-    spawnPosition: {x: -4, y: 0, z: 7.173306}
-    eulerAngles: {x: -0, y: 180, z: 0}
+    spawnPosition: {x: 10.52805, y: 0, z: 2}
+    eulerAngles: {x: 0, y: 270, z: 0}
     capacity: 3
-    busColor: {r: 0, g: 0, b: 1, a: 1}
+    busColor: {r: 0.5, g: 0, b: 0.5, a: 1}
   - busID: Bus_2
-    spawnPosition: {x: 2, y: 0, z: -6.6554418}
-    eulerAngles: {x: -0, y: -0, z: -0}
-    capacity: 3
-    busColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  - busID: Bus_3
-    spawnPosition: {x: -11.736486, y: 0, z: 0}
+    spawnPosition: {x: -10.478373, y: 0, z: 0}
     eulerAngles: {x: -0, y: 90, z: 0}
     capacity: 3
-    busColor: {r: 1, g: 0, b: 0, a: 1}
+    busColor: {r: 0, g: 1, b: 0, a: 1}
+  - busID: Bus_3
+    spawnPosition: {x: -10.697706, y: 0, z: -4}
+    eulerAngles: {x: -0, y: 90, z: 0}
+    capacity: 3
+    busColor: {r: 0.5, g: 0, b: 0.5, a: 1}
   passengerQueueOrder: []
