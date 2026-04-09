@@ -95,6 +95,7 @@ namespace BusAway.LevelEditor
                     GenerateRandomGrid(data, randomComplexity);
                     UpdateAllRoadTypes(data);
                     EditorUtility.SetDirty(data);
+                    Repaint();
                 }
                 EditorGUILayout.EndHorizontal();
             }
@@ -180,7 +181,7 @@ namespace BusAway.LevelEditor
             int minSize = Mathf.Max(2, 7 - complexity);
             
             RectInt rootArea = new RectInt(0, 0, data.gridWidth, data.gridHeight);
-            RecursiveDivide(data, rootArea, minSize);
+            RecursiveDivide(data, rootArea, minSize, true);
 
             // Task 2: Hole Punching (Decimation)
             float eraseChance = (6 - complexity) * 0.08f; 
@@ -222,33 +223,49 @@ namespace BusAway.LevelEditor
             }
         }
 
-        private void RecursiveDivide(LevelDesignData data, RectInt area, int minSize)
+        private void RecursiveDivide(LevelDesignData data, RectInt area, int minSize, bool isRoot)
         {
-            if (area.width < minSize * 2 + 1 && area.height < minSize * 2 + 1) return;
+            bool canSplitH = area.height >= minSize * 2 + 1;
+            bool canSplitV = area.width >= minSize * 2 + 1;
 
-            bool splitHorizontal = area.height > area.width;
-            if (area.width >= minSize * 2 + 1 && area.height >= minSize * 2 + 1)
+            if (!canSplitH && !canSplitV)
+            {
+                if (isRoot)
+                {
+                    // Fallback for very small grids to ensure at least one road is carved
+                    minSize = 1;
+                    canSplitH = area.height >= 3;
+                    canSplitV = area.width >= 3;
+                    if (!canSplitH && !canSplitV) return; // Still completely too small (e.g. 2x2)
+                }
+                else return;
+            }
+
+            bool splitHorizontal = false;
+            if (canSplitH && canSplitV)
                 splitHorizontal = Random.value > 0.5f;
+            else if (canSplitH)
+                splitHorizontal = true;
+            else if (canSplitV)
+                splitHorizontal = false;
 
             if (splitHorizontal)
             {
-                if (area.height < minSize * 2 + 1) return;
                 int splitY = Random.Range(area.yMin + minSize, area.yMax - minSize);
                 for (int x = area.xMin; x < area.xMax; x++)
                     data.grid[splitY * data.gridWidth + x] = RoadCellType.GenericRoad;
                 
-                RecursiveDivide(data, new RectInt(area.x, area.y, area.width, splitY - area.y), minSize);
-                RecursiveDivide(data, new RectInt(area.x, splitY + 1, area.width, area.yMax - (splitY + 1)), minSize);
+                RecursiveDivide(data, new RectInt(area.x, area.y, area.width, splitY - area.y), minSize, false);
+                RecursiveDivide(data, new RectInt(area.x, splitY + 1, area.width, area.yMax - (splitY + 1)), minSize, false);
             }
             else
             {
-                if (area.width < minSize * 2 + 1) return;
                 int splitX = Random.Range(area.xMin + minSize, area.xMax - minSize);
                 for (int y = area.yMin; y < area.yMax; y++)
                     data.grid[y * data.gridWidth + splitX] = RoadCellType.GenericRoad;
 
-                RecursiveDivide(data, new RectInt(area.x, area.y, splitX - area.x, area.height), minSize);
-                RecursiveDivide(data, new RectInt(splitX + 1, area.y, area.xMax - (splitX + 1), area.height), minSize);
+                RecursiveDivide(data, new RectInt(area.x, area.y, splitX - area.x, area.height), minSize, false);
+                RecursiveDivide(data, new RectInt(splitX + 1, area.y, area.xMax - (splitX + 1), area.height), minSize, false);
             }
         }
     }
