@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08fed8f831812b743a953bc8785b0157, type: 3}
+  m_Name: Level_001
+  m_EditorClassIdentifier: Assembly-CSharp::BusAway.Level.LevelDesignData
+  roadSegments:
+  - segmentName: Main Ring Road
+    sharpPoints:
+    - {x: -8.453009, y: 0, z: -4.333686}
+    - {x: -8.453009, y: 0, z: 4.333686}
+    - {x: 8.453009, y: 0, z: 4.333686}
+    - {x: 8.453009, y: 0, z: -4.333686}
+    - {x: -8.453009, y: 0, z: -4.333686}
+    roadWidth: 2.5
+    cornerRadius: 2
+    isClosedLoop: 1
+  - segmentName: Parking Branch 1
+    sharpPoints:
+    - {x: -4, y: 0, z: 4.333686}
+    - {x: -4, y: 0, z: 9.066385}
+    roadWidth: 2
+    cornerRadius: 1
+    isClosedLoop: 0
+  - segmentName: Parking Branch 2
+    sharpPoints:
+    - {x: 2, y: 0, z: -4.333686}
+    - {x: 2, y: 0, z: -8.203279}
+    roadWidth: 2
+    cornerRadius: 1
+    isClosedLoop: 0
+  - segmentName: Parking Branch 3
+    sharpPoints:
+    - {x: -8.453009, y: 0, z: 0}
+    - {x: -13.925472, y: 0, z: 0}
+    roadWidth: 2
+    cornerRadius: 1
+    isClosedLoop: 0
+  levelGoalCoin: 160
+  buses:
+  - busID: Bus_1
+    spawnPosition: {x: -4, y: 0, z: 7.173306}
+    eulerAngles: {x: -0, y: 180, z: 0}
+    capacity: 3
+    busColor: {r: 0, g: 0, b: 1, a: 1}
+  - busID: Bus_2
+    spawnPosition: {x: 2, y: 0, z: -6.6554418}
+    eulerAngles: {x: -0, y: -0, z: -0}
+    capacity: 3
+    busColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  - busID: Bus_3
+    spawnPosition: {x: -11.736486, y: 0, z: 0}
+    eulerAngles: {x: -0, y: 90, z: 0}
+    capacity: 3
+    busColor: {r: 1, g: 0, b: 0, a: 1}
+  passengerQueueOrder: []
