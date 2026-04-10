@@ -210,12 +210,14 @@ namespace BusAway.Gameplay
 
             if (nextPos.x != -1)
             {
+                bool isParking = busStopStems.ContainsKey(bus.busColor) && nextPos == busStopStems[bus.busColor];
+
                 Vector3 targetWorld = GridToWorld(nextPos);
                 targetWorld.y = bus.transform.position.y;
-                bus.MoveAlongPath(new List<Vector3> { bus.transform.position, targetWorld });
+                bus.MoveAlongPath(new List<Vector3> { bus.transform.position, targetWorld }, isParking);
 
                 // If it reached its stem, it parks
-                if (busStopStems.ContainsKey(bus.busColor) && nextPos == busStopStems[bus.busColor])
+                if (isParking)
                 {
                     bus.OnPathComplete -= OnBusPathComplete;
                 }
@@ -311,7 +313,7 @@ namespace BusAway.Gameplay
                 for (int i = 0; i < data.resolvedLands.Count; i++)
                 {
                     var land = data.resolvedLands[i];
-                    BusAway.CrowdSystem.CrowdManager.Instance.SpawnLand(i, land.agentCount, land.color);
+                    BusAway.CrowdSystem.CrowdManager.Instance.SpawnLand(i, land.agentCount, land.color, data.resolvedLands.Count);
                 }
             }
             else
@@ -428,6 +430,8 @@ namespace BusAway.Gameplay
 
         private Vector2Int WorldToGrid(Vector3 worldPos)
         {
+            if (levelGenerator != null) worldPos -= levelGenerator.transform.position;
+            
             float tSize = levelGenerator.activeLevelData.tileSize;
             float offsetX = (levelGenerator.activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
             float offsetZ = (levelGenerator.activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
@@ -442,7 +446,10 @@ namespace BusAway.Gameplay
             float tSize = levelGenerator.activeLevelData.tileSize;
             float offsetX = (levelGenerator.activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
             float offsetZ = (levelGenerator.activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
-            return new Vector3(offsetX - gridPos.x * tSize, 0f, offsetZ - gridPos.y * tSize);
+            
+            Vector3 localPos = new Vector3(offsetX - gridPos.x * tSize, 0f, offsetZ - gridPos.y * tSize);
+            if (levelGenerator != null) return localPos + levelGenerator.transform.position;
+            return localPos;
         }
 
         private bool IsAdjacent(Vector2Int a, Vector2Int b)

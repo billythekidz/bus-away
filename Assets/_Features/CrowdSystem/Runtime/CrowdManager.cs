@@ -172,11 +172,14 @@ namespace BusAway.CrowdSystem
         /// <summary>
         /// Spawns a batch of agents for one "land" column.
         /// </summary>
-        public void SpawnLand(int landIndex, int agentCount, Color color)
+        public void SpawnLand(int landIndex, int agentCount, Color color, int totalLands = 1)
         {
             Debug.Assert(agentCount % 4 == 0, $"SpawnLand: agentCount must be multiple of 4, got {agentCount}");
 
-            Vector3 basePos = landBaseOffset + new Vector3(landIndex * landSpacingX, 0, 0);
+            float formationWidth = (totalLands - 1) * landSpacingX + (3 * agentSpacingX);
+            float offsetX = -formationWidth / 2f;
+
+            Vector3 basePos = this.transform.position + landBaseOffset + new Vector3(offsetX + landIndex * landSpacingX, 0, 0);
 
             for (int i = 0; i < agentCount; i++)
             {

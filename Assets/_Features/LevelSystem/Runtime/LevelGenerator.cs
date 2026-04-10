@@ -73,11 +73,10 @@ namespace BusAway.Gameplay
 
             ClearOldLevel();
 
-            // 0. Build Ground
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Environment_Ground";
-            ground.transform.SetParent(this.transform);
-            ground.transform.position = new Vector3(0, -0.1f, 0);
+            ground.transform.SetParent(this.transform, false);
+            ground.transform.localPosition = new Vector3(0, -0.1f, 0);
             ground.transform.localScale = new Vector3(10, 1, 10);
 
             Material groundMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -86,7 +85,7 @@ namespace BusAway.Gameplay
 
             // 1. Build Roads (Autotiling)
             GameObject roadRoot = new GameObject("RoadsRoot");
-            roadRoot.transform.SetParent(this.transform);
+            roadRoot.transform.SetParent(this.transform, false);
 
             float tSize = activeLevelData.tileSize;
             // Camera is rotated 180° on Y-axis, so we flip both X and Z
@@ -150,7 +149,7 @@ namespace BusAway.Gameplay
 #else
                         tileObj = Instantiate(prefabTemplate, roadRoot.transform);
 #endif
-                        tileObj.transform.position = pos;
+                        tileObj.transform.localPosition = pos;
                         // NO ROTATION OVERRIDE: Prefab retains its own saved rotation
                         tileObj.name = $"Tile_{x}_{y}_{shapeTypeStr}";
 
@@ -192,7 +191,7 @@ namespace BusAway.Gameplay
                                 }
 
                                 Vector3 centerPos = (pos + rightPos) / 2f;
-                                propObj.transform.position = centerPos + branchOffsetWorld;
+                                propObj.transform.localPosition = centerPos + branchOffsetWorld;
 
                                 propObj.transform.rotation = busStopPropTemplate.transform.rotation;
 
@@ -209,9 +208,9 @@ namespace BusAway.Gameplay
                     {
                         // ----- FALLBACK GENERATION USING UNITY PRIMITIVES -----
                         tileObj = new GameObject($"Tile_{x}_{y}_Fallback_{shapeTypeStr}");
-                        tileObj.transform.SetParent(roadRoot.transform);
-                        tileObj.transform.position = pos;
-                        tileObj.transform.eulerAngles = new Vector3(0, rotYFallback, 0);
+                        tileObj.transform.SetParent(roadRoot.transform, false);
+                        tileObj.transform.localPosition = pos;
+                        tileObj.transform.localEulerAngles = new Vector3(0, rotYFallback, 0);
 
                         float asphaltWidth = tSize * 0.75f;
                         float offsetH = 0.05f;
@@ -367,7 +366,7 @@ namespace BusAway.Gameplay
                 int rows = 6;
                 var crowdManager = FindObjectOfType<BusAway.CrowdSystem.CrowdManager>();
                 if (crowdManager != null) rows = crowdManager.rowsPerLand;
-                
+
                 int count = rows * 4;
 
                 var landCfg = new CrowdLandConfig

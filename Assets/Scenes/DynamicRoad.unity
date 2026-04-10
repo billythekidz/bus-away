@@ -1042,10 +1042,12 @@ MonoBehaviour:
   separationWeight: 1.5
   targetWeight: 1
   arrivalDistance: 0.1
-  landSpacingX: 0.8
+  landSpacingX: 1
+  landRoadSpacingZ: 1
   agentSpacingX: 0.6
   agentSpacingZ: 0.6
-  landBaseOffset: {x: 0, y: 0, z: 4}
+  landBaseOffset: {x: 0, y: 0, z: 11}
+  rowsPerLand: 10
   straightRoadPrefab: {fileID: 7849522091454530481, guid: f572591bba5e1d04dbc0496ed24271e2, type: 3}
   agentPrefab: {fileID: 1706293780309561138, guid: 924091245d0ea4348af569c918b7b53c, type: 3}
 --- !u!4 &243802240
@@ -6313,7 +6315,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 358746274288257805, guid: 924091245d0ea4348af569c918b7b53c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.24
+      value: 6.44
       objectReference: {fileID: 0}
     - target: {fileID: 358746274288257805, guid: 924091245d0ea4348af569c918b7b53c, type: 3}
       propertyPath: m_LocalPosition.y
@@ -7570,6 +7572,10 @@ PrefabInstance:
     - target: {fileID: 1139479779292454085, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3830535819967523841, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
+      propertyPath: cameraFramer
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 3830535819967523841, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
       propertyPath: activeLevelData

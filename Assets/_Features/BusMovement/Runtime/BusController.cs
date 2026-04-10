@@ -58,6 +58,17 @@ namespace BusMovement
             if (busWallB) busWallB.SetParent(visualContainer, true);
             if (busWallL) busWallL.SetParent(visualContainer, true);
 
+            if (skidMarks != null)
+            {
+                foreach(var sm in skidMarks)
+                {
+                    if (sm != null) 
+                    {
+                        sm.time *= 0.33f;
+                    }
+                }
+            }
+
             lastPos = transform.position;
 
             StartVibration();
@@ -95,7 +106,7 @@ namespace BusMovement
             lastPos = transform.position;
         }
 
-        public void MoveAlongPath(List<Vector3> pathPoints)
+        public void MoveAlongPath(List<Vector3> pathPoints, bool isFinalStop = false)
         {
             if (pathPoints == null || pathPoints.Count == 0) return;
 
@@ -125,24 +136,18 @@ namespace BusMovement
                 
                 float duration = distance / moveSpeed;
 
-                // Rotation
+                // Translation & Rotation in parallel
+                var posTween = PrimeTween.Tween.Position(transform, targetFlat, duration, PrimeTween.Ease.Linear);
+                moveSequence.Chain(posTween);
+
                 Vector3 direction = (targetFlat - currentPos).normalized;
                 if (direction != Vector3.zero)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(direction);
-                    float angle = Quaternion.Angle(currentPos == transform.position ? transform.rotation : Quaternion.LookRotation(direction), targetRot);
-                    
-                    // Add rotational tween if there's a turn. To keep it simple and accurate, 
-                    // we tween specifically to the target rotation.
-                    if (angle > 1f)
-                    {
-                        float rotDuration = angle / turnSpeed;
-                        moveSequence.Chain(PrimeTween.Tween.Rotation(transform, targetRot, rotDuration, PrimeTween.Ease.InOutQuad));
-                    }
+                    float rotDuration = Mathf.Min(duration, 0.15f); // Fast face-forward
+                    moveSequence.Group(PrimeTween.Tween.Rotation(transform, targetRot, rotDuration, PrimeTween.Ease.InOutQuad));
                 }
 
-                // Translation
-                moveSequence.Chain(PrimeTween.Tween.Position(transform, targetFlat, duration, PrimeTween.Ease.Linear));
                 currentPos = targetFlat;
             }
 
@@ -152,19 +157,26 @@ namespace BusMovement
             // On Complete handling
             moveSequence.OnComplete(() =>
             {
-                wobbleTween.Stop();
-                if (exhaustVFX != null) exhaustVFX.Stop();
-                SetSkidMarksEmitting(false);
+                if (isFinalStop)
+                {
+                    wobbleTween.Stop();
+                    if (exhaustVFX != null) exhaustVFX.Stop();
+                    SetSkidMarksEmitting(false);
 
-                // Khựng xe tạo cảm giác phanh
-                brakeSequence.Stop();
-                brakeSequence = PrimeTween.Sequence.Create()
-                    .Chain(PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad))
-                    .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce))
-                    .OnComplete(() => {
-                        StartVibration();
-                        OnPathComplete?.Invoke(this);
-                    });
+                    // Khựng xe tạo cảm giác phanh
+                    brakeSequence.Stop();
+                    brakeSequence = PrimeTween.Sequence.Create()
+                        .Chain(PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad))
+                        .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce))
+                        .OnComplete(() => {
+                            StartVibration();
+                            OnPathComplete?.Invoke(this);
+                        });
+                }
+                else
+                {
+                    OnPathComplete?.Invoke(this);
+                }
             });
         }
         
