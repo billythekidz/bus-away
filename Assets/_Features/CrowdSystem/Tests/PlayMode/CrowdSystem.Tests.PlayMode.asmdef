@@ -1,10 +1,10 @@
 {
-    "name": "CrowdSystem.Tests.PlayMode",
-    "rootNamespace": "",
+    "name": "BusAway.CrowdSystem.Tests.PlayMode",
+    "rootNamespace": "BusAway.Tests.PlayMode",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "CrowdSystem.Runtime"
+        "BusAway.CrowdSystem.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
