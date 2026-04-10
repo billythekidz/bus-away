@@ -49,11 +49,11 @@ namespace BusAway.LevelEditor
                         string label = ".";
                         Color btnColor = Color.white;
 
-                        bool isBusStop = cell >= RoadCellType.HalfT_BusStop_N_Left && cell <= RoadCellType.HalfT_BusStop_W_Right;
+                        bool isBusStopBranch = cell >= RoadCellType.DeadEnd_N && cell <= RoadCellType.DeadEnd_W;
 
-                        if (isBusStop)
+                        if (isBusStopBranch)
                         {
-                            label = "B";
+                            label = GetCellLabel(cell); // Will be "B"
                             btnColor = new Color(0.2f, 0.6f, 1.0f);
                         }
                         else if (cell != RoadCellType.Empty)
@@ -381,21 +381,26 @@ namespace BusAway.LevelEditor
                 case RoadCellType.Corner_NE: return "╚";
                 case RoadCellType.Corner_NW: return "╝";
                 
-                case RoadCellType.HalfT_BusStop_E_Left: return "T_EL"; // ╠
-                case RoadCellType.HalfT_BusStop_E_Right: return "T_ER"; // ╠
-                case RoadCellType.HalfT_BusStop_W_Left: return "T_WL"; // ╣
-                case RoadCellType.HalfT_BusStop_W_Right: return "T_WR"; // ╣
-                case RoadCellType.HalfT_BusStop_S_Left: return "T_SL"; // ╦
-                case RoadCellType.HalfT_BusStop_S_Right: return "T_SR"; // ╦
-                case RoadCellType.HalfT_BusStop_N_Left: return "T_NL"; // ╩
-                case RoadCellType.HalfT_BusStop_N_Right: return "T_NR"; // ╩
+                case RoadCellType.HalfT_BusStop_N_Left:
+                case RoadCellType.HalfT_BusStop_N_Right:
+                    return "╩";
+                case RoadCellType.HalfT_BusStop_E_Left:
+                case RoadCellType.HalfT_BusStop_E_Right:
+                    return "╠";
+                case RoadCellType.HalfT_BusStop_S_Left:
+                case RoadCellType.HalfT_BusStop_S_Right:
+                    return "╦";
+                case RoadCellType.HalfT_BusStop_W_Left:
+                case RoadCellType.HalfT_BusStop_W_Right:
+                    return "╣";
                 
                 case RoadCellType.Cross: return "╬";
                 
-                case RoadCellType.DeadEnd_N: return "╨";
-                case RoadCellType.DeadEnd_E: return "╞";
-                case RoadCellType.DeadEnd_S: return "╥";
-                case RoadCellType.DeadEnd_W: return "╡";
+                case RoadCellType.DeadEnd_N:
+                case RoadCellType.DeadEnd_E:
+                case RoadCellType.DeadEnd_S:
+                case RoadCellType.DeadEnd_W:
+                    return "B";
                 
                 default: return "▒";
             }
