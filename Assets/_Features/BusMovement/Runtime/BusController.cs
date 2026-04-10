@@ -11,6 +11,7 @@ namespace BusMovement
         public Transform busWallF;
         public Transform busWallR;
         public Transform busWallB;
+        public Transform busWallL;
         
         [Header("Wheels")]
         public Transform wheelFL;
@@ -43,6 +44,7 @@ namespace BusMovement
             if (busWallF) busWallF.SetParent(visualContainer, true);
             if (busWallR) busWallR.SetParent(visualContainer, true);
             if (busWallB) busWallB.SetParent(visualContainer, true);
+            if (busWallL) busWallL.SetParent(visualContainer, true);
 
             lastPos = transform.position;
         }
@@ -162,6 +164,7 @@ namespace BusMovement
             ApplyColorToProp(busWallF, wallColor);
             ApplyColorToProp(busWallR, wallColor);
             ApplyColorToProp(busWallB, wallColor);
+            ApplyColorToProp(busWallL, wallColor);
         }
 
         private void ApplyColorToProp(Transform part, Color color)

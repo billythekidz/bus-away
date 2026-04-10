@@ -169,8 +169,12 @@ namespace BusAway.LevelEditor
         {
             System.Func<int, int, bool> HasRoad = (cx, cy) => {
                 if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
-                // Treat anything that isn't Empty as a road connection
-                return data.grid[cy * data.gridWidth + cx] != RoadCellType.Empty;
+                RoadCellType t = data.grid[cy * data.gridWidth + cx];
+                // Treat anything that isn't Empty as a road connection, 
+                // EXCEPT DeadEnds (parking slots) so adjacent roads don't falsely bend toward them.
+                if (t == RoadCellType.Empty) return false;
+                if (t >= RoadCellType.DeadEnd_N && t <= RoadCellType.DeadEnd_W) return false;
+                return true;
             };
 
             for (int y = 0; y < data.gridHeight; y++)
@@ -318,18 +322,15 @@ namespace BusAway.LevelEditor
                     {
                         if (y + 1 < data.gridHeight && data.GetCell(x, y + 1) == RoadCellType.Empty && data.GetCell(x + 1, y + 1) == RoadCellType.Empty)
                         {
-                            if (IsIsolatedBusStopCells(data, x, y + 1, x + 1, y + 1, x, y, x + 1, y))
-                            {
-                                int cx = x, cy = y;
-                                candidates.Add(() => {
-                                    if (data.GetCell(cx, cy + 1) != RoadCellType.Empty || data.GetCell(cx + 1, cy + 1) != RoadCellType.Empty) return;
-                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_EW || data.GetCell(cx + 1, cy) != RoadCellType.Straight_EW) return;
-                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_N_Left);
-                                    data.SetCell(cx + 1, cy, RoadCellType.HalfT_BusStop_N_Right);
-                                    data.SetCell(cx, cy + 1, RoadCellType.DeadEnd_N);
-                                    data.SetCell(cx + 1, cy + 1, RoadCellType.DeadEnd_N);
-                                });
-                            }
+                            int cx = x, cy = y;
+                            candidates.Add(() => {
+                                if (data.GetCell(cx, cy + 1) != RoadCellType.Empty || data.GetCell(cx + 1, cy + 1) != RoadCellType.Empty) return;
+                                if (data.GetCell(cx, cy) != RoadCellType.Straight_EW || data.GetCell(cx + 1, cy) != RoadCellType.Straight_EW) return;
+                                data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_N_Left);
+                                data.SetCell(cx + 1, cy, RoadCellType.HalfT_BusStop_N_Right);
+                                data.SetCell(cx, cy + 1, RoadCellType.DeadEnd_N);
+                                data.SetCell(cx + 1, cy + 1, RoadCellType.DeadEnd_N);
+                            });
                         }
                     }
 
@@ -338,18 +339,15 @@ namespace BusAway.LevelEditor
                     {
                         if (y - 1 >= 0 && data.GetCell(x, y - 1) == RoadCellType.Empty && data.GetCell(x + 1, y - 1) == RoadCellType.Empty)
                         {
-                            if (IsIsolatedBusStopCells(data, x, y - 1, x + 1, y - 1, x, y, x + 1, y))
-                            {
-                                int cx = x, cy = y;
-                                candidates.Add(() => {
-                                    if (data.GetCell(cx, cy - 1) != RoadCellType.Empty || data.GetCell(cx + 1, cy - 1) != RoadCellType.Empty) return;
-                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_EW || data.GetCell(cx + 1, cy) != RoadCellType.Straight_EW) return;
-                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_S_Right);
-                                    data.SetCell(cx + 1, cy, RoadCellType.HalfT_BusStop_S_Left);
-                                    data.SetCell(cx, cy - 1, RoadCellType.DeadEnd_S);
-                                    data.SetCell(cx + 1, cy - 1, RoadCellType.DeadEnd_S);
-                                });
-                            }
+                            int cx = x, cy = y;
+                            candidates.Add(() => {
+                                if (data.GetCell(cx, cy - 1) != RoadCellType.Empty || data.GetCell(cx + 1, cy - 1) != RoadCellType.Empty) return;
+                                if (data.GetCell(cx, cy) != RoadCellType.Straight_EW || data.GetCell(cx + 1, cy) != RoadCellType.Straight_EW) return;
+                                data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_S_Right);
+                                data.SetCell(cx + 1, cy, RoadCellType.HalfT_BusStop_S_Left);
+                                data.SetCell(cx, cy - 1, RoadCellType.DeadEnd_S);
+                                data.SetCell(cx + 1, cy - 1, RoadCellType.DeadEnd_S);
+                            });
                         }
                     }
 
@@ -358,18 +356,15 @@ namespace BusAway.LevelEditor
                     {
                         if (x + 1 < data.gridWidth && data.GetCell(x + 1, y) == RoadCellType.Empty && data.GetCell(x + 1, y + 1) == RoadCellType.Empty)
                         {
-                            if (IsIsolatedBusStopCells(data, x + 1, y, x + 1, y + 1, x, y, x, y + 1))
-                            {
-                                int cx = x, cy = y;
-                                candidates.Add(() => {
-                                    if (data.GetCell(cx + 1, cy) != RoadCellType.Empty || data.GetCell(cx + 1, cy + 1) != RoadCellType.Empty) return;
-                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_NS || data.GetCell(cx, cy + 1) != RoadCellType.Straight_NS) return;
-                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_E_Right);
-                                    data.SetCell(cx, cy + 1, RoadCellType.HalfT_BusStop_E_Left);
-                                    data.SetCell(cx + 1, cy, RoadCellType.DeadEnd_E);
-                                    data.SetCell(cx + 1, cy + 1, RoadCellType.DeadEnd_E);
-                                });
-                            }
+                            int cx = x, cy = y;
+                            candidates.Add(() => {
+                                if (data.GetCell(cx + 1, cy) != RoadCellType.Empty || data.GetCell(cx + 1, cy + 1) != RoadCellType.Empty) return;
+                                if (data.GetCell(cx, cy) != RoadCellType.Straight_NS || data.GetCell(cx, cy + 1) != RoadCellType.Straight_NS) return;
+                                data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_E_Right);
+                                data.SetCell(cx, cy + 1, RoadCellType.HalfT_BusStop_E_Left);
+                                data.SetCell(cx + 1, cy, RoadCellType.DeadEnd_E);
+                                data.SetCell(cx + 1, cy + 1, RoadCellType.DeadEnd_E);
+                            });
                         }
                     }
 
@@ -378,18 +373,15 @@ namespace BusAway.LevelEditor
                     {
                         if (x - 1 >= 0 && data.GetCell(x - 1, y) == RoadCellType.Empty && data.GetCell(x - 1, y + 1) == RoadCellType.Empty)
                         {
-                            if (IsIsolatedBusStopCells(data, x - 1, y, x - 1, y + 1, x, y, x, y + 1))
-                            {
-                                int cx = x, cy = y;
-                                candidates.Add(() => {
-                                    if (data.GetCell(cx - 1, cy) != RoadCellType.Empty || data.GetCell(cx - 1, cy + 1) != RoadCellType.Empty) return;
-                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_NS || data.GetCell(cx, cy + 1) != RoadCellType.Straight_NS) return;
-                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_W_Left);
-                                    data.SetCell(cx, cy + 1, RoadCellType.HalfT_BusStop_W_Right);
-                                    data.SetCell(cx - 1, cy, RoadCellType.DeadEnd_W);
-                                    data.SetCell(cx - 1, cy + 1, RoadCellType.DeadEnd_W);
-                                });
-                            }
+                            int cx = x, cy = y;
+                            candidates.Add(() => {
+                                if (data.GetCell(cx - 1, cy) != RoadCellType.Empty || data.GetCell(cx - 1, cy + 1) != RoadCellType.Empty) return;
+                                if (data.GetCell(cx, cy) != RoadCellType.Straight_NS || data.GetCell(cx, cy + 1) != RoadCellType.Straight_NS) return;
+                                data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_W_Left);
+                                data.SetCell(cx, cy + 1, RoadCellType.HalfT_BusStop_W_Right);
+                                data.SetCell(cx - 1, cy, RoadCellType.DeadEnd_W);
+                                data.SetCell(cx - 1, cy + 1, RoadCellType.DeadEnd_W);
+                            });
                         }
                     }
                 }
