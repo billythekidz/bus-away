@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -28,11 +29,18 @@ namespace BusAway.CrowdSystem
         private NativeArray<float3> velocities;
         private NativeArray<float3> targets;
         private NativeArray<Matrix4x4> matrices;
-        
+
+        // Bug #2/#3 Fix: tempPositions stored as a field so we can manually dispose it
+        // after the job completes, instead of relying on the removed [DeallocateOnJobCompletion].
+        private NativeArray<float3> tempPositions;
+
         // Parallel array for colors to pass to MaterialPropertyBlock
         private Vector4[] colors;
-        private Vector4[] batchColors; // Temp array for max 1023 instances
-        private Matrix4x4[] batchMatrices; // Temp array for graphics fallback
+        private Matrix4x4[] batchMatrices; // Temp array for graphics copy (max 1023)
+
+        // Bug #5 Fix: Use List<Vector4> so SetVectorArray only sends exactly batchSize
+        // elements, rather than always sending all 1023 even for the last partial batch.
+        private List<Vector4> colorBatchList;
 
         private int activeCount = 0;
         private JobHandle crowdJobHandle;
@@ -41,9 +49,15 @@ namespace BusAway.CrowdSystem
 
         private void Awake()
         {
-            if (Instance == null) Instance = this;
-            else Destroy(gameObject);
+            // Bug #7 Fix: Early return before InitializeArrays to prevent allocating
+            // NativeArrays on a duplicate that is about to be destroyed.
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
 
+            Instance = this;
             InitializeArrays();
 
             if (agentMaterial != null)
@@ -60,16 +74,22 @@ namespace BusAway.CrowdSystem
             matrices = new NativeArray<Matrix4x4>(maxAgents, Allocator.Persistent);
             
             colors = new Vector4[maxAgents];
-            batchColors = new Vector4[1023];
             batchMatrices = new Matrix4x4[1023];
-            
+
+            // Bug #5 Fix: pre-allocate the List with max capacity to avoid resizing.
+            colorBatchList = new List<Vector4>(1023);
+
             propertyBlock = new MaterialPropertyBlock();
         }
 
         private void OnDestroy()
         {
-            // Ensure jobs are completed before disposing
+            // Ensure all in-flight jobs are done before disposing any memory.
             crowdJobHandle.Complete();
+
+            // Bug #2/#3 Fix: Manually dispose tempPositions here since we removed
+            // [DeallocateOnJobCompletion]. Guard with IsCreated in case it was never allocated.
+            if (tempPositions.IsCreated) tempPositions.Dispose();
 
             if (positions.IsCreated) positions.Dispose();
             if (velocities.IsCreated) velocities.Dispose();
@@ -156,15 +176,21 @@ namespace BusAway.CrowdSystem
             EnsureInitialized();
             if (activeCount == 0) return;
 
-            // 1. Ensure previous frame's job is complete
+            // 1. Complete previous frame's job. This MUST happen before we dispose
+            //    tempPositions and before we allocate a new one.
             crowdJobHandle.Complete();
 
-            // Create a temp copy of positions to avoid Job System aliasing check (reading and writing to same array)
-            // 12KB copy is incredibly cheap (0.00x ms)
-            NativeArray<float3> tempPositions = new NativeArray<float3>(activeCount, Allocator.TempJob);
+            // Bug #2/#3 Fix: Manually dispose the previous frame's temp read-only snapshot.
+            // Since we removed [DeallocateOnJobCompletion], this is the correct disposal point.
+            // crowdJobHandle.Complete() above guarantees the job that owned it is finished.
+            if (tempPositions.IsCreated) tempPositions.Dispose();
+
+            // 2. Create a fresh snapshot of positions for the read-only separation check.
+            //    This eliminates the Job System aliasing error (R/W to same NativeArray).
+            tempPositions = new NativeArray<float3>(activeCount, Allocator.TempJob);
             NativeArray<float3>.Copy(positions, tempPositions, activeCount);
 
-            // 2. Schedule Movement Job only for activeCount
+            // 3. Schedule Movement Job for activeCount agents
             var movementJob = new CrowdMovementJob
             {
                 deltaTime = Time.deltaTime,
@@ -175,14 +201,14 @@ namespace BusAway.CrowdSystem
                 arrivalDistance = arrivalDistance,
                 activeCount = activeCount,
                 targets = targets,
-                allPositions = tempPositions, // This array will be auto-disposed because we added [DeallocateOnJobCompletion]
+                allPositions = tempPositions, // Read-only snapshot; disposed manually next frame
                 positions = positions,
                 velocities = velocities
             };
 
             JobHandle moveHandle = movementJob.Schedule(activeCount, 64); // Batch size 64
 
-            // 3. Schedule Matrix Job
+            // 4. Schedule Matrix Job — depends on move job completing first
             var matrixJob = new UpdateMatricesJob
             {
                 positions = positions,
@@ -190,7 +216,6 @@ namespace BusAway.CrowdSystem
                 matrices = matrices
             };
 
-            // Matrix job depends on move job
             crowdJobHandle = matrixJob.Schedule(activeCount, 64, moveHandle);
         }
 
@@ -201,7 +226,7 @@ namespace BusAway.CrowdSystem
             // Wait for matrix calculation to be done before rendering
             crowdJobHandle.Complete();
 
-            // Render in batches of 1023
+            // Render in batches of 1023 (DrawMeshInstanced hard limit)
             RenderBatches();
         }
 
@@ -212,13 +237,18 @@ namespace BusAway.CrowdSystem
             {
                 int batchSize = Mathf.Min(1023, activeCount - rendered);
 
-                // Copy colors and (if using DrawMeshInstanced) matrices to managed arrays for this batch
-                Array.Copy(colors, rendered, batchColors, 0, batchSize);
-                
-                propertyBlock.SetVectorArray(BaseColorID, batchColors);
+                // Bug #5 Fix: Build the color list with exactly batchSize entries.
+                // Previously, batchColors was always 1023 elements even for partial batches,
+                // causing SetVectorArray to send stale data from the previous batch.
+                colorBatchList.Clear();
+                for (int j = 0; j < batchSize; j++)
+                {
+                    colorBatchList.Add(colors[rendered + j]);
+                }
+                propertyBlock.SetVectorArray(BaseColorID, colorBatchList);
 
-                // For absolute compatibility with DrawMeshInstanced (works on all pipelines without NativeArray support)
-                // We copy matrices. It's cheap for 1000 items.
+                // Copy matrices from NativeArray to managed array for DrawMeshInstanced.
+                // Cheap for <= 1023 items.
                 NativeArray<Matrix4x4>.Copy(matrices, rendered, batchMatrices, 0, batchSize);
 
                 Graphics.DrawMeshInstanced(
@@ -267,6 +297,10 @@ namespace BusAway.CrowdSystem
         [ContextMenu("Debug: Set Random Targets")]
         public void DebugSetRandomTargets()
         {
+            // Bug #4 Fix: Complete any in-flight jobs before reading positions[] on the Main Thread.
+            // Previously, this could read/write the same NativeArray concurrently with a running job.
+            crowdJobHandle.Complete();
+
             for (int i = 0; i < activeCount; i++)
             {
                 float3 pos = positions[i];

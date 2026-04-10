@@ -18,8 +18,10 @@ namespace BusAway.CrowdSystem
         public int activeCount;
 
         [ReadOnly] public NativeArray<float3> targets;
-        [DeallocateOnJobCompletion]
-        [ReadOnly] public NativeArray<float3> allPositions; // All positions for separation check
+        // Bug #2 Fix: Removed deprecated [DeallocateOnJobCompletion] attribute.
+        // This attribute was removed in com.unity.collections@2.x.
+        // CrowdManager now manually disposes this array after crowdJobHandle.Complete().
+        [ReadOnly] public NativeArray<float3> allPositions;
 
         public NativeArray<float3> positions;
         public NativeArray<float3> velocities;
@@ -103,8 +105,13 @@ namespace BusAway.CrowdSystem
                 }
             }
 
-            // Standard Matrix construction: TRS
-            matrices[index] = Matrix4x4.TRS(pos, rot, new float3(1, 1, 1));
+            // Bug #6 Fix: Use explicit Vector3/Quaternion types instead of float3/quaternion
+            // to ensure correct Burst compilation and avoid ambiguous implicit conversions.
+            matrices[index] = Matrix4x4.TRS(
+                new Vector3(pos.x, pos.y, pos.z),
+                new Quaternion(rot.value.x, rot.value.y, rot.value.z, rot.value.w),
+                Vector3.one
+            );
         }
     }
 }
