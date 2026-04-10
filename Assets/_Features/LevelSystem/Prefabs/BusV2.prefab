@@ -5232,7 +5232,6 @@ MonoBehaviour:
   turnSpeed: 180
   wheelRadius: 0.5
   exhaustVFX: {fileID: 0}
-  busAnimator: {fileID: 0}
   skidMarks:
   - {fileID: 5803616536644504040}
   - {fileID: 2610118405778780119}

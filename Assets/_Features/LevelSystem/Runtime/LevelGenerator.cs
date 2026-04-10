@@ -154,8 +154,11 @@ namespace BusAway.Gameplay
                         // NO ROTATION OVERRIDE: Prefab retains its own saved rotation
                         tileObj.name = $"Tile_{x}_{y}_{shapeTypeStr}";
 
-                        // Nếu tile này cần spawn thêm canopy (Bus Stop prop) và có gán prefab
-                        if (busStopPropTemplate != null)
+                    // Nếu tile này cần spawn thêm canopy (Bus Stop prop) và có gán prefab
+                    if (busStopPropTemplate != null)
+                    {
+                        // Chỉ spawn 1 lần cho cặp Bus Stop bằng cách check "_Left"
+                        if (cell.ToString().Contains("_Left"))
                         {
                             GameObject propObj;
 #if UNITY_EDITOR
@@ -164,11 +167,41 @@ namespace BusAway.Gameplay
 #else
                             propObj = Instantiate(busStopPropTemplate, roadRoot.transform);
 #endif
-                            propObj.transform.position = pos;
+                            Vector3 rightPos = pos;
+                            Vector3 branchOffsetWorld = Vector3.zero;
+
+                            if (cell == RoadCellType.HalfT_BusStop_N_Left) 
+                            { 
+                                rightPos = new Vector3(offsetX - (x + 1) * tSize, 0, offsetZ - y * tSize); 
+                                branchOffsetWorld = new Vector3(-tSize, 0, 0);
+                            }
+                            else if (cell == RoadCellType.HalfT_BusStop_E_Left)
+                            {
+                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y - 1) * tSize);
+                                branchOffsetWorld = new Vector3(tSize, 0, 0);
+                            }
+                            else if (cell == RoadCellType.HalfT_BusStop_W_Left)
+                            {
+                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y + 1) * tSize);
+                                branchOffsetWorld = new Vector3(0, 0, -tSize);
+                            }
+                            else if (cell == RoadCellType.HalfT_BusStop_S_Left)
+                            {
+                                rightPos = new Vector3(offsetX - (x - 1) * tSize, 0, offsetZ - y * tSize);
+                                branchOffsetWorld = new Vector3(0, 0, tSize);
+                            }
+
+                            Vector3 centerPos = (pos + rightPos) / 2f;
+                            propObj.transform.position = centerPos + branchOffsetWorld;
                             propObj.transform.rotation = busStopPropTemplate.transform.rotation;
+                            
+                            // Scale x2 as requested
+                            propObj.transform.localScale = busStopPropTemplate.transform.localScale * 2f;
+
                             // Để yên rotation nguyên bản của prefab
                             propObj.name = $"BusStop_Prop_{x}_{y}";
                         }
+                    }
                     }
                     else
                     {

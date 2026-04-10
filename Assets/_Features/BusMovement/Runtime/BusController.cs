@@ -20,73 +20,114 @@ namespace BusMovement
 
         [Header("Movement Settings")]
         public float moveSpeed = 5f;
-        public float turnSpeed = 180f;
+        public float turnSpeed = 360f;
         public float wheelRadius = 0.5f;
 
         [Header("VFX & Animation")]
         public ParticleSystem exhaustVFX;
-        public Animator busAnimator;
         public TrailRenderer[] skidMarks;
         public ParticleSystem sparkBlingVFX;
-        
-        private bool isMoving = false;
-        private Coroutine moveRoutine;
+
+        private PrimeTween.Sequence moveSequence;
+        private PrimeTween.Tween wobbleTween;
+        private Transform visualContainer;
+        private Vector3 lastPos;
+
+        private void Awake()
+        {
+            // Dynamically wrap the visuals so we can wobble/jerk them together cleanly
+            visualContainer = new GameObject("VisualContainer").transform;
+            visualContainer.SetParent(transform, false);
+            
+            if (busFloor) busFloor.SetParent(visualContainer, true);
+            if (busWallF) busWallF.SetParent(visualContainer, true);
+            if (busWallR) busWallR.SetParent(visualContainer, true);
+            if (busWallB) busWallB.SetParent(visualContainer, true);
+
+            lastPos = transform.position;
+        }
+
+        private void Update()
+        {
+            if (moveSequence.isAlive)
+            {
+                float distanceMoved =  Vector3.Distance(transform.position, lastPos);
+                if (distanceMoved > 0.0001f)
+                {
+                    float rotDelta = (distanceMoved / (2f * Mathf.PI * wheelRadius)) * 360f;
+                    SpinWheels(rotDelta);
+                }
+            }
+            lastPos = transform.position;
+        }
 
         public void MoveAlongPath(List<Vector3> pathPoints)
         {
-            if (moveRoutine != null) StopCoroutine(moveRoutine);
-            moveRoutine = StartCoroutine(MoveRoutine(pathPoints));
-        }
+            if (pathPoints == null || pathPoints.Count == 0) return;
 
-        private IEnumerator MoveRoutine(List<Vector3> pathPoints)
-        {
-            isMoving = true;
+            moveSequence.Stop();
+            wobbleTween.Stop();
+            
+            if (visualContainer) visualContainer.localRotation = Quaternion.identity;
+            
             if (exhaustVFX != null && !exhaustVFX.isPlaying) exhaustVFX.Play();
-            if (busAnimator != null) busAnimator.SetBool("IsMoving", true);
             SetSkidMarksEmitting(true);
+
+            moveSequence = PrimeTween.Sequence.Create();
+            
+            Vector3 currentPos = transform.position;
 
             foreach (var point in pathPoints)
             {
-                // Simple 2D distance check ignoring Y 
                 Vector3 targetFlat = new Vector3(point.x, transform.position.y, point.z);
+                float distance = Vector3.Distance(currentPos, targetFlat);
+                if (distance < 0.01f) continue;
+                
+                float duration = distance / moveSpeed;
 
-                while (Vector3.Distance(transform.position, targetFlat) > 0.05f)
+                // Rotation
+                Vector3 direction = (targetFlat - currentPos).normalized;
+                if (direction != Vector3.zero)
                 {
-                    Vector3 direction = (targetFlat - transform.position).normalized;
+                    Quaternion targetRot = Quaternion.LookRotation(direction);
+                    float angle = Quaternion.Angle(currentPos == transform.position ? transform.rotation : Quaternion.LookRotation(direction), targetRot);
                     
-                    // Rotate towards destination
-                    if (direction != Vector3.zero)
+                    // Add rotational tween if there's a turn. To keep it simple and accurate, 
+                    // we tween specifically to the target rotation.
+                    if (angle > 1f)
                     {
-                        Quaternion targetRot = Quaternion.LookRotation(direction);
-                        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                        float rotDuration = angle / turnSpeed;
+                        moveSequence.Chain(PrimeTween.Tween.Rotation(transform, targetRot, rotDuration, PrimeTween.Ease.InOutQuad));
                     }
-
-                    // Move
-                    float distanceToMove = moveSpeed * Time.deltaTime;
-                    transform.position = Vector3.MoveTowards(transform.position, targetFlat, distanceToMove);
-                    
-                    // Animate Wheels
-                    float rotationDelta = (distanceToMove / (2f * Mathf.PI * wheelRadius)) * 360f;
-                    SpinWheels(rotationDelta);
-
-                    yield return null;
-                    targetFlat = new Vector3(point.x, transform.position.y, point.z); // Update in case path points move
                 }
+
+                // Translation
+                moveSequence.Chain(PrimeTween.Tween.Position(transform, targetFlat, duration, PrimeTween.Ease.Linear));
+                currentPos = targetFlat;
             }
 
-            isMoving = false;
-            if (exhaustVFX != null) exhaustVFX.Stop();
-            if (busAnimator != null) busAnimator.SetBool("IsMoving", false);
-            SetSkidMarksEmitting(false);
-        }
+            // Start Wobbling the body (Chòng chành)
+            wobbleTween = PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(0, 0, 3f), 0.2f, PrimeTween.Ease.InOutSine, cycles: -1, cycleMode: PrimeTween.CycleMode.Yoyo);
 
-        private void SpinWheels(float degrees)
+            // On Complete handling
+            moveSequence.OnComplete(() =>
+            {
+                wobbleTween.Stop();
+                if (exhaustVFX != null) exhaustVFX.Stop();
+                SetSkidMarksEmitting(false);
+
+                // Khựng xe tạo cảm giác phanh
+                PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad)
+                     .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce));
+            });
+        }
+        
+        private void SpinWheels(float degreesDelta)
         {
-            // Usually wheels rotate along X axis, adjust Space and Axis as needed for the BusV2 mesh
-            if (wheelFL) wheelFL.Rotate(degrees, 0, 0, Space.Self);
-            if (wheelFR) wheelFR.Rotate(degrees, 0, 0, Space.Self);
-            if (wheelBL) wheelBL.Rotate(degrees, 0, 0, Space.Self);
-            if (wheelBR) wheelBR.Rotate(degrees, 0, 0, Space.Self);
+            if (wheelFL) wheelFL.Rotate(degreesDelta, 0, 0, Space.Self);
+            if (wheelFR) wheelFR.Rotate(degreesDelta, 0, 0, Space.Self);
+            if (wheelBL) wheelBL.Rotate(degreesDelta, 0, 0, Space.Self);
+            if (wheelBR) wheelBR.Rotate(degreesDelta, 0, 0, Space.Self);
         }
 
         private void SetSkidMarksEmitting(bool emit)
