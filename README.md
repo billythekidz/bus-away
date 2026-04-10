@@ -76,6 +76,11 @@ As per the assignment guidelines, AI was used for **≥ 50%** of the development
 
 All AI-generated code was reviewed, tested, and integrated manually by the developer.
 
+### ⚠️ Note on Level Grid & Asset Creation
+
+While AI agents were heavily utilized for architecture and coding, **the 3D tile models (using ProBuilder) and road grid prefabs had to be designed and constructed manually, one by one.** 
+Attempting to ask AI agents to procedurally generate or parameterize specific visual 3D structures (like the `HalfT` bus stops or fully-featured `DeadEnd` tiles with proper edge loops and UVs) proved to be extremely inefficient. It resulted in numerous shape errors, misaligned concave/convex curves, and time-consuming back-and-forth debugging. Building these assets manually guarantees geometric precision and high visual polish.
+
 ---
 
 ## 🛠️ Technical Details
