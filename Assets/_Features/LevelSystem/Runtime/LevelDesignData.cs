@@ -116,16 +116,9 @@ namespace BusAway.Level
 
         [Header("Crowd Lands")]
         [HideInInspector]
-        public int minLandCount = 2;
+        public int landCount = 3;
 
-        [HideInInspector]
-        public int maxLandCount = 4;
 
-        [HideInInspector]
-        public int minAgentsPerLand = 8;
-
-        [HideInInspector]
-        public int maxAgentsPerLand = 24;
 
         [HideInInspector]
         public List<Color> landColorPalette = new List<Color>();

@@ -1042,13 +1042,12 @@ MonoBehaviour:
   separationWeight: 1.5
   targetWeight: 1
   arrivalDistance: 0.1
-  landSpacingX: 4
+  landSpacingX: 0.8
   agentSpacingX: 0.6
   agentSpacingZ: 0.6
-  landBaseOffset: {x: 0, y: 0, z: -2}
+  landBaseOffset: {x: 0, y: 0, z: 4}
   straightRoadPrefab: {fileID: 7849522091454530481, guid: f572591bba5e1d04dbc0496ed24271e2, type: 3}
-  agentMesh: {fileID: -964220427784028482, guid: 01a521858e3ca734ebd1974933b1000a, type: 3}
-  agentMaterial: {fileID: 2100000, guid: dcc1007bc2203ea4e8bd3618c75fd9ce, type: 2}
+  agentPrefab: {fileID: 1706293780309561138, guid: 924091245d0ea4348af569c918b7b53c, type: 3}
 --- !u!4 &243802240
 Transform:
   m_ObjectHideFlags: 0
@@ -1058,7 +1057,7 @@ Transform:
   m_GameObject: {fileID: 243802238}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -2.54}
+  m_LocalPosition: {x: 0, y: 0, z: 4.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4743,6 +4742,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 612063477}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1392000206
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6344,6 +6355,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SimpleHuman
       objectReference: {fileID: 0}
+    - target: {fileID: 1706293780309561138, guid: 924091245d0ea4348af569c918b7b53c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1918745526158059176, guid: 924091245d0ea4348af569c918b7b53c, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -7526,7 +7541,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1139479779292454085, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -2
+      value: -5
       objectReference: {fileID: 0}
     - target: {fileID: 1139479779292454085, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
       propertyPath: m_LocalRotation.w

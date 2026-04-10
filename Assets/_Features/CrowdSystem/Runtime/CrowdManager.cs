@@ -21,15 +21,24 @@ namespace BusAway.CrowdSystem
         public float arrivalDistance = 0.1f;
 
         [Header("Land Spawning")]
-        public float landSpacingX = 4.0f;
+        public float landSpacingX = 0.8f;
+        public float landRoadSpacingZ = 1.0f;
         public float agentSpacingX = 0.6f;
         public float agentSpacingZ = 0.6f;
         public Vector3 landBaseOffset = new Vector3(0, 0, -2.0f);
+        public int rowsPerLand = 6;
         public GameObject straightRoadPrefab;
-        
+
         [Header("Rendering")]
-        public Mesh agentMesh;
-        public Material agentMaterial;
+        public GameObject agentPrefab;
+
+        private class SubMeshInfo
+        {
+            public Mesh mesh;
+            public Material material;
+            public Matrix4x4 localMatrix;
+        }
+        private List<SubMeshInfo> subMeshes = new List<SubMeshInfo>();
 
         // Native Arrays for Jobs
         private NativeArray<float3> positions;
@@ -44,6 +53,8 @@ namespace BusAway.CrowdSystem
         // Parallel array for colors to pass to MaterialPropertyBlock
         private Vector4[] colors;
         private Matrix4x4[] batchMatrices; // Temp array for graphics copy (max 1023)
+        private Matrix4x4[] tempSubmeshMatrices; // Temp array for local offset calculation
+
 
         // Bug #5 Fix: Use List<Vector4> so SetVectorArray only sends exactly batchSize
         // elements, rather than always sending all 1023 even for the last partial batch.
@@ -66,11 +77,6 @@ namespace BusAway.CrowdSystem
 
             Instance = this;
             InitializeArrays();
-
-            if (agentMaterial != null)
-            {
-                agentMaterial.enableInstancing = true;
-            }
         }
 
         private void InitializeArrays()
@@ -79,14 +85,36 @@ namespace BusAway.CrowdSystem
             velocities = new NativeArray<float3>(maxAgents, Allocator.Persistent);
             targets = new NativeArray<float3>(maxAgents, Allocator.Persistent);
             matrices = new NativeArray<Matrix4x4>(maxAgents, Allocator.Persistent);
-            
+
             colors = new Vector4[maxAgents];
             batchMatrices = new Matrix4x4[1023];
+            tempSubmeshMatrices = new Matrix4x4[1023];
 
-            // Bug #5 Fix: pre-allocate the List with max capacity to avoid resizing.
             colorBatchList = new List<Vector4>(1023);
-
             propertyBlock = new MaterialPropertyBlock();
+
+            subMeshes.Clear();
+            if (agentPrefab != null)
+            {
+                Renderer[] renderers = agentPrefab.GetComponentsInChildren<Renderer>(true);
+                foreach (Renderer r in renderers)
+                {
+                    MeshFilter mf = r.GetComponent<MeshFilter>();
+                    if (mf != null && mf.sharedMesh != null && r.sharedMaterial != null)
+                    {
+                        SubMeshInfo info = new SubMeshInfo();
+                        info.mesh = mf.sharedMesh;
+                        info.material = new Material(r.sharedMaterial);
+                        info.material.enableInstancing = true;
+
+                        Matrix4x4 rootTR_Inverse = Matrix4x4.Inverse(Matrix4x4.TRS(agentPrefab.transform.position, agentPrefab.transform.rotation, Vector3.one));
+                        Matrix4x4 childLocal = r.transform.localToWorldMatrix;
+                        info.localMatrix = rootTR_Inverse * childLocal;
+
+                        subMeshes.Add(info);
+                    }
+                }
+            }
         }
 
         private void OnDestroy()
@@ -161,7 +189,7 @@ namespace BusAway.CrowdSystem
 
             // Spawn roads under the land
             GameObject roadPrefab = straightRoadPrefab;
-            float tSize = 2.0f;
+            float tSize = landRoadSpacingZ;
 
             if (roadPrefab == null)
             {
@@ -173,17 +201,6 @@ namespace BusAway.CrowdSystem
                     {
                         var field = g.GetType().GetField("straightNS");
                         if (field != null) roadPrefab = field.GetValue(g) as GameObject;
-
-                        var dataField = g.GetType().GetField("activeLevelData");
-                        if (dataField != null) 
-                        {
-                            var data = dataField.GetValue(g);
-                            if (data != null)
-                            {
-                                var tsField = data.GetType().GetField("tileSize");
-                                if (tsField != null) tSize = (float)tsField.GetValue(data);
-                            }
-                        }
                         break;
                     }
                 }
@@ -196,7 +213,7 @@ namespace BusAway.CrowdSystem
 
                 int rows = agentCount / 4;
                 float depth = rows * agentSpacingZ; // how far local Z goes back
-                
+
                 // Add a bit of padding and calculate number of pieces
                 int roadPieces = Mathf.CeilToInt((depth + 0.5f) / tSize);
                 if (roadPieces < 1) roadPieces = 1;
@@ -231,7 +248,7 @@ namespace BusAway.CrowdSystem
             if (index < 0 || index >= activeCount) return;
 
             int lastIndex = activeCount - 1;
-            
+
             // Swap with last active instance if it's not the same
             if (index != lastIndex)
             {
@@ -307,7 +324,8 @@ namespace BusAway.CrowdSystem
 
         private void LateUpdate()
         {
-            if (activeCount == 0 || agentMesh == null || agentMaterial == null) return;
+            // Only draw if we have agents + mesh + mat
+            if (activeCount == 0 || subMeshes.Count == 0) return;
 
             // Wait for matrix calculation to be done before rendering
             crowdJobHandle.Complete();
@@ -323,9 +341,6 @@ namespace BusAway.CrowdSystem
             {
                 int batchSize = Mathf.Min(1023, activeCount - rendered);
 
-                // Bug #5 Fix: Build the color list with exactly batchSize entries.
-                // Previously, batchColors was always 1023 elements even for partial batches,
-                // causing SetVectorArray to send stale data from the previous batch.
                 colorBatchList.Clear();
                 for (int j = 0; j < batchSize; j++)
                 {
@@ -333,21 +348,34 @@ namespace BusAway.CrowdSystem
                 }
                 propertyBlock.SetVectorArray(BaseColorID, colorBatchList);
 
-                // Copy matrices from NativeArray to managed array for DrawMeshInstanced.
-                // Cheap for <= 1023 items.
                 NativeArray<Matrix4x4>.Copy(matrices, rendered, batchMatrices, 0, batchSize);
 
-                Graphics.DrawMeshInstanced(
-                    agentMesh,
-                    0,
-                    agentMaterial,
-                    batchMatrices,
-                    batchSize,
-                    propertyBlock,
-                    ShadowCastingMode.On,
-                    true, // Receive shadows
-                    gameObject.layer
-                );
+                for (int s = 0; s < subMeshes.Count; s++)
+                {
+                    var sub = subMeshes[s];
+                    Matrix4x4[] drawnMatrices = batchMatrices;
+
+                    if (!sub.localMatrix.isIdentity)
+                    {
+                        drawnMatrices = tempSubmeshMatrices;
+                        for (int i = 0; i < batchSize; i++)
+                        {
+                            drawnMatrices[i] = batchMatrices[i] * sub.localMatrix;
+                        }
+                    }
+
+                    Graphics.DrawMeshInstanced(
+                        sub.mesh,
+                        0,
+                        sub.material,
+                        drawnMatrices,
+                        batchSize,
+                        propertyBlock,
+                        ShadowCastingMode.On,
+                        true, // Receive shadows
+                        gameObject.layer
+                    );
+                }
 
                 rendered += batchSize;
             }

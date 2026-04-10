@@ -354,7 +354,7 @@ namespace BusAway.Gameplay
         {
             if (activeLevelData == null) return;
 
-            int landCount = Random.Range(activeLevelData.minLandCount, activeLevelData.maxLandCount + 1);
+            int landCount = activeLevelData.landCount;
 
             var palette = new System.Collections.Generic.List<Color>(activeLevelData.landColorPalette);
             ShuffleList(palette);
@@ -364,9 +364,10 @@ namespace BusAway.Gameplay
             int totalAgents = 0;
             for (int i = 0; i < landCount; i++)
             {
-                int minRows = activeLevelData.minAgentsPerLand / 4;
-                int maxRows = activeLevelData.maxAgentsPerLand / 4;
-                int rows = Random.Range(minRows, maxRows + 1);
+                int rows = 6;
+                var crowdManager = FindObjectOfType<BusAway.CrowdSystem.CrowdManager>();
+                if (crowdManager != null) rows = crowdManager.rowsPerLand;
+                
                 int count = rows * 4;
 
                 var landCfg = new CrowdLandConfig
@@ -377,10 +378,7 @@ namespace BusAway.Gameplay
                 activeLevelData.resolvedLands.Add(landCfg);
                 totalAgents += count;
 
-                if (BusAway.CrowdSystem.CrowdManager.Instance != null)
-                {
-                    BusAway.CrowdSystem.CrowdManager.Instance.SpawnLand(i, count, landCfg.color);
-                }
+
             }
 
 #if UNITY_EDITOR

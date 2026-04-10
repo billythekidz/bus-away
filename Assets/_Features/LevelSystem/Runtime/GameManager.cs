@@ -149,7 +149,7 @@ namespace BusAway.Gameplay
                     busCtrl.previousGridPos = WorldToGrid(startPos - stop.transform.forward * tileSize);
                     busCtrl.OnPathComplete += OnBusPathComplete;
 
-                    Vector3 roadCenter = stopPos + stop.transform.forward * (tileSize * 0.5f);
+                    Vector3 roadCenter = stopPos + stop.transform.forward * tileSize;
                     busCtrl.MoveAlongPath(new List<Vector3> { startPos, roadCenter });
                 }
             }
@@ -408,10 +408,10 @@ namespace BusAway.Gameplay
             var list = new List<Vector2Int>();
             if (cell == RoadCellType.Straight_NS) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(0, 1)); }
             else if (cell == RoadCellType.Straight_EW) { list.Add(pos + new Vector2Int(1, 0)); list.Add(pos + new Vector2Int(-1, 0)); }
-            else if (cell == RoadCellType.Corner_NE) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(1, 0)); }
-            else if (cell == RoadCellType.Corner_NW) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(-1, 0)); }
-            else if (cell == RoadCellType.Corner_SE) { list.Add(pos + new Vector2Int(0, 1)); list.Add(pos + new Vector2Int(1, 0)); }
-            else if (cell == RoadCellType.Corner_SW) { list.Add(pos + new Vector2Int(0, 1)); list.Add(pos + new Vector2Int(-1, 0)); }
+            else if (cell == RoadCellType.Corner_NE) { list.Add(pos + new Vector2Int(0, 1)); list.Add(pos + new Vector2Int(1, 0)); }
+            else if (cell == RoadCellType.Corner_NW) { list.Add(pos + new Vector2Int(0, 1)); list.Add(pos + new Vector2Int(-1, 0)); }
+            else if (cell == RoadCellType.Corner_SE) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(1, 0)); }
+            else if (cell == RoadCellType.Corner_SW) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(-1, 0)); }
             else if (cell.ToString().Contains("HalfT_BusStop"))
             {
                 if (cell.ToString().Contains("_N_") || cell.ToString().Contains("_S_")) { list.Add(pos + new Vector2Int(1, 0)); list.Add(pos + new Vector2Int(-1, 0)); }

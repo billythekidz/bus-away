@@ -100,34 +100,23 @@ namespace BusAway.LevelEditor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("── Crowd Lands ──", EditorStyles.boldLabel);
 
-            // Min/Max land count with validation
+            // Land count with validation
             EditorGUI.BeginChangeCheck();
-            int newMin = EditorGUILayout.IntSlider("Min Land Count", data.minLandCount, 2, 5);
-            int newMax = EditorGUILayout.IntSlider("Max Land Count", data.maxLandCount, 2, 5);
-            if (newMin > newMax) newMin = newMax;
-            data.minLandCount = newMin;
-            data.maxLandCount = newMax;
-
-            // Min/Max agents per land (multiple of 4 enforced)
-            int rawMinAgents = EditorGUILayout.IntField("Min Agents Per Land", data.minAgentsPerLand);
-            int rawMaxAgents = EditorGUILayout.IntField("Max Agents Per Land", data.maxAgentsPerLand);
-            data.minAgentsPerLand = Mathf.Max(4, (rawMinAgents / 4) * 4); // clamp to multiple of 4
-            data.maxAgentsPerLand = Mathf.Max(data.minAgentsPerLand, (rawMaxAgents / 4) * 4);
+            data.landCount = EditorGUILayout.IntSlider("Land Count", data.landCount, 2, 5);
 
             EditorGUILayout.HelpBox(
-                $"Rows per land: {data.minAgentsPerLand/4}–{data.maxAgentsPerLand/4} " +
-                $"({data.minAgentsPerLand}–{data.maxAgentsPerLand} agents)",
+                $"Agent count per land is now managed dynamically via CrowdManager.rowsPerLand in the scene.",
                 MessageType.Info);
 
             // Color palette with visual swatches
             EditorGUILayout.LabelField("Land Color Palette", EditorStyles.boldLabel);
             if (data.landColorPalette == null) data.landColorPalette = new List<Color>();
 
-            // Show warning if palette < maxLandCount
-            if (data.landColorPalette.Count < data.maxLandCount)
+            // Show warning if palette < landCount
+            if (data.landColorPalette.Count < data.landCount)
             {
                 EditorGUILayout.HelpBox(
-                    $"Palette has {data.landColorPalette.Count} colors but maxLandCount={data.maxLandCount}. Add more colors.",
+                    $"Palette has {data.landColorPalette.Count} colors but landCount={data.landCount}. Add more colors.",
                     MessageType.Warning);
             }
 
