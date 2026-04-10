@@ -357,14 +357,14 @@ namespace BusAway.LevelEditor
                 case RoadCellType.Corner_NE: return "╚";
                 case RoadCellType.Corner_NW: return "╝";
                 
-                case RoadCellType.HalfT_E_Left: return "T_EL"; // ╠
-                case RoadCellType.HalfT_E_Right: return "T_ER"; // ╠
-                case RoadCellType.HalfT_W_Left: return "T_WL"; // ╣
-                case RoadCellType.HalfT_W_Right: return "T_WR"; // ╣
-                case RoadCellType.HalfT_S_Left: return "T_SL"; // ╦
-                case RoadCellType.HalfT_S_Right: return "T_SR"; // ╦
-                case RoadCellType.HalfT_N_Left: return "T_NL"; // ╩
-                case RoadCellType.HalfT_N_Right: return "T_NR"; // ╩
+                case RoadCellType.HalfT_BusStop_E_Left: return "T_EL"; // ╠
+                case RoadCellType.HalfT_BusStop_E_Right: return "T_ER"; // ╠
+                case RoadCellType.HalfT_BusStop_W_Left: return "T_WL"; // ╣
+                case RoadCellType.HalfT_BusStop_W_Right: return "T_WR"; // ╣
+                case RoadCellType.HalfT_BusStop_S_Left: return "T_SL"; // ╦
+                case RoadCellType.HalfT_BusStop_S_Right: return "T_SR"; // ╦
+                case RoadCellType.HalfT_BusStop_N_Left: return "T_NL"; // ╩
+                case RoadCellType.HalfT_BusStop_N_Right: return "T_NR"; // ╩
                 
                 case RoadCellType.Cross: return "╬";
                 
