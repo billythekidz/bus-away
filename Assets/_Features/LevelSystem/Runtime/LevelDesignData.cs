@@ -73,6 +73,9 @@ namespace BusAway.Level
         public int gridHeight = 5;
         public float tileSize => 1f;
 
+        [Tooltip("If true, prevents S-Curves and Notches from generating T-Junctions and Crosses.")]
+        public bool enforcePerfectLoop = true;
+
 
         [HideInInspector]
         public RoadCellType[] grid; // Array size: width * height

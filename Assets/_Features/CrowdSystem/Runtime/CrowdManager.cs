@@ -25,6 +25,7 @@ namespace BusAway.CrowdSystem
         public float agentSpacingX = 0.6f;
         public float agentSpacingZ = 0.6f;
         public Vector3 landBaseOffset = new Vector3(0, 0, -2.0f);
+        public GameObject straightRoadPrefab;
         
         [Header("Rendering")]
         public Mesh agentMesh;
@@ -156,6 +157,59 @@ namespace BusAway.CrowdSystem
                 Vector3 pos = basePos + new Vector3(col * agentSpacingX, 0, -row * agentSpacingZ);
 
                 SpawnCharacter(pos, pos, color);
+            }
+
+            // Spawn roads under the land
+            GameObject roadPrefab = straightRoadPrefab;
+            float tSize = 2.0f;
+
+            if (roadPrefab == null)
+            {
+                // Reflection fallback to avoid Assembly dependency CS0234
+                UnityEngine.Object[] generators = Resources.FindObjectsOfTypeAll(System.Type.GetType("BusAway.Gameplay.LevelGenerator, LevelSystem") ?? typeof(MonoBehaviour));
+                foreach (var g in generators)
+                {
+                    if (g.GetType().Name == "LevelGenerator")
+                    {
+                        var field = g.GetType().GetField("straightNS");
+                        if (field != null) roadPrefab = field.GetValue(g) as GameObject;
+
+                        var dataField = g.GetType().GetField("activeLevelData");
+                        if (dataField != null) 
+                        {
+                            var data = dataField.GetValue(g);
+                            if (data != null)
+                            {
+                                var tsField = data.GetType().GetField("tileSize");
+                                if (tsField != null) tSize = (float)tsField.GetValue(data);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (roadPrefab != null)
+            {
+                GameObject roadGroup = new GameObject($"Roads_Land_{landIndex}");
+                roadGroup.transform.SetParent(this.transform);
+
+                int rows = agentCount / 4;
+                float depth = rows * agentSpacingZ; // how far local Z goes back
+                
+                // Add a bit of padding and calculate number of pieces
+                int roadPieces = Mathf.CeilToInt((depth + 0.5f) / tSize);
+                if (roadPieces < 1) roadPieces = 1;
+
+                // Center of the 4 columns
+                float cx = basePos.x + 1.5f * agentSpacingX;
+                for (int p = 0; p < roadPieces; p++)
+                {
+                    GameObject rw = Instantiate(roadPrefab, roadGroup.transform);
+                    // Place it progressively downwards along negative Z
+                    // Adjust by agentSpacingZ / 2 f to align nicely with the front of the crowd
+                    rw.transform.position = new Vector3(cx, 0, basePos.z + agentSpacingZ / 2f - p * tSize - tSize / 2f);
+                }
             }
 
             Debug.Log($"Land[{landIndex}] spawned: {agentCount} agents, color={color}");

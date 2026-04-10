@@ -15,7 +15,7 @@ namespace BusAway.Gameplay
 
         [Tooltip("Elevation angle in degrees (0 = ground level, 90 = top-down)")]
         [Range(20f, 85f)]
-        public float elevationAngle = 72f;
+        public float elevationAngle = 55f;
 
         [Tooltip("Horizontal orbit angle in degrees (0 = looking from +Z towards -Z)")]
         public float orbitAngle = 0f;
@@ -25,7 +25,7 @@ namespace BusAway.Gameplay
         public float distanceMultiplier = 1.4f;
 
         [Tooltip("Camera field of view for perspective mode (lower = flatter, more orthographic feel)")]
-        public float fieldOfView = 35f;
+        public float fieldOfView = 22f;
 
         /// <summary>
         /// Frame the camera to show all 3D geometry within the specified root transform.

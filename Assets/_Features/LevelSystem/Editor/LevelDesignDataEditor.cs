@@ -95,90 +95,43 @@ namespace BusAway.LevelEditor
             }
 
             GUILayout.Space(15);
+            DrawDefaultInspector();
 
-            // ── Gameplay Config ──────────────────────────────────────────────────
-            EditorGUILayout.LabelField("── Gameplay Config ──", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            data.levelGoalCoin = EditorGUILayout.IntField(
-                new GUIContent("Level Goal (Coins)", "Total coins the player must collect to clear this level."),
-                data.levelGoalCoin);
-            data.busStopLength = Mathf.Max(1, EditorGUILayout.IntField(
-                new GUIContent("Bus Stop Count", "Number of bus stops to procedurally place on the map."),
-                data.busStopLength));
-
-            // ── Bus Dispatch Config ───────────────────────────────────────────────
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("── Bus Dispatch Config ──", EditorStyles.boldLabel);
-
-            data.busesPerStop = Mathf.Max(1, EditorGUILayout.IntField(
-                new GUIContent("Buses Per Stop",
-                    "How many buses are dispatched per bus stop. All stops share the same number.\n" +
-                    "Each bus loops the road ring continuously until it collects enough same-color passengers,\n" +
-                    "then drives into the bus stop and disappears."),
-                data.busesPerStop));
-
-            data.agentsPerBus = Mathf.Max(1, EditorGUILayout.IntField(
-                new GUIContent("Agents Per Bus",
-                    "Minimum number of same-color passengers a bus must board before it exits the road loop\n" +
-                    "and parks at the bus stop. Default: 32.\n\n" +
-                    "This also drives crowd land sizing automatically:\n" +
-                    "  agentCount per color = (buses of that color) × Agents Per Bus"),
-                data.agentsPerBus));
-
-            // --- Auto-recalculate resolvedLands based on landColorPalette + busesPerStop + agentsPerBus ---
-            // Each unique color in the palette gets: busesPerStop buses × agentsPerBus agents
-            if (data.landColorPalette != null && data.landColorPalette.Count > 0)
-            {
-                if (data.resolvedLands == null) data.resolvedLands = new List<CrowdLandConfig>();
-                data.resolvedLands.Clear();
-                foreach (var color in data.landColorPalette)
-                {
-                    data.resolvedLands.Add(new CrowdLandConfig
-                    {
-                        color = color,
-                        // busesPerStop buses of this color × agentsPerBus passengers each
-                        agentCount = data.busesPerStop * data.agentsPerBus
-                    });
-                }
-            }
-
-            int totalBuses = (data.landColorPalette != null ? data.landColorPalette.Count : 0) * data.busesPerStop;
-            int totalAgents = totalBuses * data.agentsPerBus;
-            EditorGUILayout.HelpBox(
-                $"Total buses: {totalBuses}  ({data.busesPerStop} per stop × {data.landColorPalette?.Count ?? 0} colors)\n" +
-                $"Total agents: {totalAgents}  ({data.busesPerStop} buses × {data.agentsPerBus} agents × {data.landColorPalette?.Count ?? 0} colors)",
-                MessageType.Info);
-
-            // ── Crowd Lands ───────────────────────────────────────────────────────
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("── Crowd Lands ──", EditorStyles.boldLabel);
 
-            int newMin = EditorGUILayout.IntSlider(
-                new GUIContent("Min Land Count", "Minimum number of crowd spawn areas to generate on the map."),
-                data.minLandCount, 2, 5);
-            int newMax = EditorGUILayout.IntSlider(
-                new GUIContent("Max Land Count", "Maximum number of crowd spawn areas to generate on the map."),
-                data.maxLandCount, 2, 5);
+            // Min/Max land count with validation
+            EditorGUI.BeginChangeCheck();
+            int newMin = EditorGUILayout.IntSlider("Min Land Count", data.minLandCount, 2, 5);
+            int newMax = EditorGUILayout.IntSlider("Max Land Count", data.maxLandCount, 2, 5);
             if (newMin > newMax) newMin = newMax;
             data.minLandCount = newMin;
             data.maxLandCount = newMax;
 
-            // Color palette with visual swatches
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Land Color Palette", EditorStyles.boldLabel);
+            // Min/Max agents per land (multiple of 4 enforced)
+            int rawMinAgents = EditorGUILayout.IntField("Min Agents Per Land", data.minAgentsPerLand);
+            int rawMaxAgents = EditorGUILayout.IntField("Max Agents Per Land", data.maxAgentsPerLand);
+            data.minAgentsPerLand = Mathf.Max(4, (rawMinAgents / 4) * 4); // clamp to multiple of 4
+            data.maxAgentsPerLand = Mathf.Max(data.minAgentsPerLand, (rawMaxAgents / 4) * 4);
+
             EditorGUILayout.HelpBox(
-                "Each color here = one bus color group. Crowd agent count per color is auto-calculated from Buses Per Stop × Agents Per Bus.",
-                MessageType.None);
+                $"Rows per land: {data.minAgentsPerLand/4}–{data.maxAgentsPerLand/4} " +
+                $"({data.minAgentsPerLand}–{data.maxAgentsPerLand} agents)",
+                MessageType.Info);
+
+            // Color palette with visual swatches
+            EditorGUILayout.LabelField("Land Color Palette", EditorStyles.boldLabel);
             if (data.landColorPalette == null) data.landColorPalette = new List<Color>();
 
-            if (data.landColorPalette.Count < data.busStopLength)
+            // Show warning if palette < maxLandCount
+            if (data.landColorPalette.Count < data.maxLandCount)
             {
                 EditorGUILayout.HelpBox(
-                    $"Palette has {data.landColorPalette.Count} colors but Bus Stop Count = {data.busStopLength}. " +
-                    $"Add at least {data.busStopLength} colors so each bus stop has a distinct bus color.",
+                    $"Palette has {data.landColorPalette.Count} colors but maxLandCount={data.maxLandCount}. Add more colors.",
                     MessageType.Warning);
             }
 
+            // Draw color swatches inline
             EditorGUILayout.BeginHorizontal();
             for (int i = 0; i < data.landColorPalette.Count; i++)
             {
@@ -189,61 +142,34 @@ namespace BusAway.LevelEditor
                 data.landColorPalette.RemoveAt(data.landColorPalette.Count - 1);
             EditorGUILayout.EndHorizontal();
 
-            // Preview resolved lands (auto-calculated)
             if (data.resolvedLands != null && data.resolvedLands.Count > 0)
             {
                 EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Resolved Lands (auto-calculated)", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("Preview: Resolved Lands (last build)", EditorStyles.miniLabel);
                 int total = 0;
                 foreach (var land in data.resolvedLands)
                 {
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.ColorField(GUIContent.none, land.color, false, false, false, GUILayout.Width(40));
-                    EditorGUILayout.LabelField($"{land.agentCount} agents  ({data.busesPerStop} bus × {data.agentsPerBus} each)");
+                    EditorGUILayout.LabelField($"{land.agentCount} agents ({land.agentCount/4} rows)");
                     total += land.agentCount;
                     EditorGUILayout.EndHorizontal();
                 }
-                EditorGUILayout.LabelField($"Grand Total: {total} agents across {data.resolvedLands.Count} color groups", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Total: {total} agents", EditorStyles.boldLabel);
             }
 
-            if (EditorGUI.EndChangeCheck())
+            if (GUI.changed)
             {
                 EditorUtility.SetDirty(data);
                 AssetDatabase.SaveAssets();
             }
         }
 
-        private int CountConsecutiveMask(LevelDesignData data, int startX, int startY, int dx, int dy, int expectedMask)
-        {
-            int count = 0;
-            int x = startX + dx;
-            int y = startY + dy;
-            
-            System.Func<int, int, bool> HasRoad = (cx, cy) => {
-                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
-                return data.grid[cy * data.gridWidth + cx] != RoadCellType.Empty; /* treating busstop same as empty for masking is intended below */
-            };
-
-            while (x >= 0 && x < data.gridWidth && y >= 0 && y < data.gridHeight)
-            {
-                bool n = HasRoad(x, y + 1);
-                bool e = HasRoad(x + 1, y);
-                bool s = HasRoad(x, y - 1);
-                bool w = HasRoad(x - 1, y);
-                int m = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
-                if (m == expectedMask) count++;
-                else break;
-                
-                x += dx;
-                y += dy;
-            }
-            return count;
-        }
-
         private void UpdateAllRoadTypes(LevelDesignData data)
         {
             System.Func<int, int, bool> HasRoad = (cx, cy) => {
                 if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                // Treat anything that isn't Empty as a road connection
                 return data.grid[cy * data.gridWidth + cx] != RoadCellType.Empty;
             };
 
@@ -253,9 +179,14 @@ namespace BusAway.LevelEditor
                 {
                     int index = y * data.gridWidth + x;
                     RoadCellType current = data.grid[index];
-                    // Chú ý: Vì BusStop hiện tại chính là HalfT, và HalfT được gen tự động từ T-Junction.
-                    // Chúng ta không skip tự động tính toán cho BusStop nữa.
-                    if (current == RoadCellType.Empty) continue;
+                    
+                    // Do not Auto-Tile cells that have been finalized as Bus Stops by Post Processing
+                    if (current == RoadCellType.Empty || 
+                        (current >= RoadCellType.HalfT_BusStop_N_Left && current <= RoadCellType.HalfT_BusStop_W_Right) ||
+                        (current >= RoadCellType.DeadEnd_N && current <= RoadCellType.DeadEnd_W)) 
+                    {
+                        continue;
+                    }
 
                     bool n = HasRoad(x, y + 1);
                     bool e = HasRoad(x + 1, y);
@@ -264,67 +195,44 @@ namespace BusAway.LevelEditor
 
                     int mask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
 
-                    RoadCellType newType = RoadCellType.GenericRoad;
+                    RoadCellType newType = current;
 
                     switch (mask)
                     {
-                        case 0: break;
-                        case 1: newType = RoadCellType.DeadEnd_N; break;
-                        case 2: newType = RoadCellType.DeadEnd_E; break;
-                        case 4: newType = RoadCellType.DeadEnd_S; break;
-                        case 8: newType = RoadCellType.DeadEnd_W; break;
-
                         case 5:  newType = RoadCellType.Straight_NS; break;
                         case 10: newType = RoadCellType.Straight_EW; break;
-                        
-                        case 3: newType = RoadCellType.Corner_NE; break;
-                        case 6: newType = RoadCellType.Corner_SE; break;
+                        case 3:  newType = RoadCellType.Corner_NE; break;
+                        case 6:  newType = RoadCellType.Corner_SE; break;
                         case 12: newType = RoadCellType.Corner_SW; break;
-                        case 9: newType = RoadCellType.Corner_NW; break;
-                        
-                        case 11: newType = (CountConsecutiveMask(data, x, y, -1, 0, 11) % 2 == 0) ? RoadCellType.HalfT_BusStop_N_Left : RoadCellType.HalfT_BusStop_N_Right; break;
-                        case 7: newType = (CountConsecutiveMask(data, x, y, 0, -1, 7) % 2 == 0) ? RoadCellType.HalfT_BusStop_E_Right : RoadCellType.HalfT_BusStop_E_Left; break;
-                        case 14: newType = (CountConsecutiveMask(data, x, y, -1, 0, 14) % 2 == 0) ? RoadCellType.HalfT_BusStop_S_Right : RoadCellType.HalfT_BusStop_S_Left; break;
-                        case 13: newType = (CountConsecutiveMask(data, x, y, 0, -1, 13) % 2 == 0) ? RoadCellType.HalfT_BusStop_W_Left : RoadCellType.HalfT_BusStop_W_Right; break;
-                        
-                        case 15: newType = RoadCellType.Cross; break;
+                        case 9:  newType = RoadCellType.Corner_NW; break;
                     }
-                    data.grid[index] = newType;
+
+                    if (mask == 5 || mask == 10 || mask == 3 || mask == 6 || mask == 12 || mask == 9)
+                    {
+                        data.grid[index] = newType;
+                    }
                 }
+            }
+        }
+
+        private bool IsIsolatedBusStopCells(LevelDesignData data, int bx1, int by1, int bx2, int by2, int parentX1, int parentY1, int parentX2, int parentY2)
+        {
+            var cellsToCheck = new (int cx, int cy)[] {
+                (bx1, by1 + 1), (bx1, by1 - 1), (bx1 + 1, by1), (bx1 - 1, by1),
+                (bx2, by2 + 1), (bx2, by2 - 1), (bx2 + 1, by2), (bx2 - 1, by2)
+            };
+
+            foreach (var (cx, cy) in cellsToCheck)
+            {
+                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) continue;
+                // Ignore the bus stop structures themselves
+                if ((cx == bx1 && cy == by1) || (cx == bx2 && cy == by2) || 
+                    (cx == parentX1 && cy == parentY1) || (cx == parentX2 && cy == parentY2)) continue;
+
+                if (data.GetCell(cx, cy) != RoadCellType.Empty) return false;
             }
 
-            // Pass 2: Overwrite the explicitly adjacent bus stop branches that generated fake corners.
-            // By enforcing their connectivity direction, they will properly render as DeadEnds.
-            for (int y = 0; y < data.gridHeight; y++)
-            {
-                for (int x = 0; x < data.gridWidth; x++)
-                {
-                    RoadCellType cell = data.grid[y * data.gridWidth + x];
-                    if (cell >= RoadCellType.HalfT_BusStop_N_Left && cell <= RoadCellType.HalfT_BusStop_W_Right)
-                    {
-                        if (cell == RoadCellType.HalfT_BusStop_N_Left || cell == RoadCellType.HalfT_BusStop_N_Right)
-                        {
-                            if (y + 1 < data.gridHeight && data.grid[(y + 1) * data.gridWidth + x] != RoadCellType.Empty) 
-                                data.grid[(y + 1) * data.gridWidth + x] = RoadCellType.DeadEnd_N;
-                        }
-                        else if (cell == RoadCellType.HalfT_BusStop_E_Left || cell == RoadCellType.HalfT_BusStop_E_Right)
-                        {
-                            if (x + 1 < data.gridWidth && data.grid[y * data.gridWidth + (x + 1)] != RoadCellType.Empty) 
-                                data.grid[y * data.gridWidth + (x + 1)] = RoadCellType.DeadEnd_E;
-                        }
-                        else if (cell == RoadCellType.HalfT_BusStop_S_Left || cell == RoadCellType.HalfT_BusStop_S_Right)
-                        {
-                            if (y - 1 >= 0 && data.grid[(y - 1) * data.gridWidth + x] != RoadCellType.Empty) 
-                                data.grid[(y - 1) * data.gridWidth + x] = RoadCellType.DeadEnd_S;
-                        }
-                        else if (cell == RoadCellType.HalfT_BusStop_W_Left || cell == RoadCellType.HalfT_BusStop_W_Right)
-                        {
-                            if (x - 1 >= 0 && data.grid[y * data.gridWidth + (x - 1)] != RoadCellType.Empty) 
-                                data.grid[y * data.gridWidth + (x - 1)] = RoadCellType.DeadEnd_W;
-                        }
-                    }
-                }
-            }
+            return true;
         }
 
         private bool IsProtectedBoardingArea(int x, int y, int gridWidth)
@@ -337,56 +245,67 @@ namespace BusAway.LevelEditor
 
         private void GenerateRandomGrid(LevelDesignData data, int complexity)
         {
-            // Clear entire grid first
-            for (int i = 0; i < data.grid.Length; i++)
-                data.grid[i] = RoadCellType.Empty;
+            if (data.gridWidth < 4) data.gridWidth = 4;
+            if (data.gridHeight < 4) data.gridHeight = 4;
 
-            // Start with a small base loop at the bottom (y=0) to guarantee a boarding area
-            int minX, maxX;
-            if (data.gridWidth % 2 == 0)
+            int maxAttempts = 100;
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                minX = data.gridWidth / 2 - 2;
-                maxX = data.gridWidth / 2 + 1;
-            }
-            else
-            {
-                minX = data.gridWidth / 2 - 2;
-                maxX = data.gridWidth / 2 + 2;
-            }
+                // Clear entire grid first
+                for (int i = 0; i < data.grid.Length; i++)
+                    data.grid[i] = RoadCellType.Empty;
 
-            // Ensure bounds are safe (just in case grid is very small)
-            if (minX < 0) minX = 0;
-            if (maxX >= data.gridWidth) maxX = data.gridWidth - 1;
+                // Start with a small base loop at the bottom (y=0) to guarantee a boarding area
+                int minX, maxX;
+                if (data.gridWidth % 2 == 0)
+                {
+                    minX = data.gridWidth / 2 - 2;
+                    maxX = data.gridWidth / 2 + 1;
+                }
+                else
+                {
+                    minX = data.gridWidth / 2 - 2;
+                    maxX = data.gridWidth / 2 + 2;
+                }
 
-            int minY = 0;
-            int maxY = 2; // small height to allow upwards expansion
-            if (maxY >= data.gridHeight) maxY = data.gridHeight - 1;
+                // Ensure bounds are safe (just in case grid is very small)
+                if (minX < 0) minX = 0;
+                if (maxX >= data.gridWidth) maxX = data.gridWidth - 1;
 
-            for (int x = minX; x <= maxX; x++)
-            {
-                data.SetCell(x, minY, RoadCellType.GenericRoad);
-                data.SetCell(x, maxY, RoadCellType.GenericRoad);
+                int minY = 0;
+                int maxY = 2; // small height to allow upwards expansion
+                if (maxY >= data.gridHeight) maxY = data.gridHeight - 1;
+
+                for (int x = minX; x <= maxX; x++)
+                {
+                    data.SetCell(x, minY, RoadCellType.GenericRoad);
+                    data.SetCell(x, maxY, RoadCellType.GenericRoad);
+                }
+                for (int y = minY; y <= maxY; y++)
+                {
+                    data.SetCell(minX, y, RoadCellType.GenericRoad);
+                    data.SetCell(maxX, y, RoadCellType.GenericRoad);
+                }
+
+                // Scatter corner bends iteratively
+                if (complexity >= 1)
+                {
+                    AddCornerBendsOrganic(data, complexity);
+                }
+
+                // Place bus stops
+                if (PlaceBusStopsOrganic(data))
+                {
+                    break;
+                }
             }
-            for (int y = minY; y <= maxY; y++)
-            {
-                data.SetCell(minX, y, RoadCellType.GenericRoad);
-                data.SetCell(maxX, y, RoadCellType.GenericRoad);
-            }
-
-            // Scatter corner bends iteratively
-            if (complexity >= 1)
-            {
-                AddCornerBendsOrganic(data, complexity);
-            }
-
-            // Place bus stops
-            PlaceBusStopsOrganic(data);
         }
 
-        private void PlaceBusStopsOrganic(LevelDesignData data)
+        private bool PlaceBusStopsOrganic(LevelDesignData data)
         {
-            int numBusStops = data.busStopLength;
-            var candidates = new System.Collections.Generic.List<System.Func<bool>>();
+            UpdateAllRoadTypes(data);
+
+            var candidates = new System.Collections.Generic.List<System.Action>();
 
             for (int y = 0; y < data.gridHeight; y++)
             {
@@ -394,108 +313,112 @@ namespace BusAway.LevelEditor
                 {
                     if (IsProtectedBoardingArea(x, y, data.gridWidth)) continue;
 
-                    // Horizontal stops (2 cells wide)
-                    if (x + 1 < data.gridWidth && data.GetCell(x, y) == RoadCellType.GenericRoad && data.GetCell(x + 1, y) == RoadCellType.GenericRoad)
+                    // North Bus Stop (requires 2 Straight_EW, and 2 Empty above)
+                    if (x + 1 < data.gridWidth && data.GetCell(x, y) == RoadCellType.Straight_EW && data.GetCell(x + 1, y) == RoadCellType.Straight_EW)
                     {
-                        if (IsProtectedBoardingArea(x + 1, y, data.gridWidth)) continue;
-                        // Check Upwards
-                        if (y + 1 < data.gridHeight)
+                        if (y + 1 < data.gridHeight && data.GetCell(x, y + 1) == RoadCellType.Empty && data.GetCell(x + 1, y + 1) == RoadCellType.Empty)
                         {
-                            int cx_ = x, cy_ = y;
-                            candidates.Add(() => {
-                                if (data.GetCell(cx_, cy_ + 1) == RoadCellType.Empty && data.GetCell(cx_ + 1, cy_ + 1) == RoadCellType.Empty)
-                                {
-                                    if (cx_ - 1 >= 0 && data.GetCell(cx_ - 1, cy_ + 1) != RoadCellType.Empty) return false;
-                                    if (cx_ + 2 < data.gridWidth && data.GetCell(cx_ + 2, cy_ + 1) != RoadCellType.Empty) return false;
-                                    if (cy_ + 2 < data.gridHeight && data.GetCell(cx_, cy_ + 2) != RoadCellType.Empty) return false;
-                                    if (cy_ + 2 < data.gridHeight && data.GetCell(cx_ + 1, cy_ + 2) != RoadCellType.Empty) return false;
-
-                                    data.SetCell(cx_, cy_ + 1, RoadCellType.GenericRoad);
-                                    data.SetCell(cx_ + 1, cy_ + 1, RoadCellType.GenericRoad);
-                                    return true;
-                                }
-                                return false;
-                            });
-                        }
-                        // Check Downwards
-                        if (y - 1 >= 0)
-                        {
-                            int cx_ = x, cy_ = y;
-                            candidates.Add(() => {
-                                if (data.GetCell(cx_, cy_ - 1) == RoadCellType.Empty && data.GetCell(cx_ + 1, cy_ - 1) == RoadCellType.Empty)
-                                {
-                                    if (cx_ - 1 >= 0 && data.GetCell(cx_ - 1, cy_ - 1) != RoadCellType.Empty) return false;
-                                    if (cx_ + 2 < data.gridWidth && data.GetCell(cx_ + 2, cy_ - 1) != RoadCellType.Empty) return false;
-                                    if (cy_ - 2 >= 0 && data.GetCell(cx_, cy_ - 2) != RoadCellType.Empty) return false;
-                                    if (cy_ - 2 >= 0 && data.GetCell(cx_ + 1, cy_ - 2) != RoadCellType.Empty) return false;
-
-                                    data.SetCell(cx_, cy_ - 1, RoadCellType.GenericRoad);
-                                    data.SetCell(cx_ + 1, cy_ - 1, RoadCellType.GenericRoad);
-                                    return true;
-                                }
-                                return false;
-                            });
+                            if (IsIsolatedBusStopCells(data, x, y + 1, x + 1, y + 1, x, y, x + 1, y))
+                            {
+                                int cx = x, cy = y;
+                                candidates.Add(() => {
+                                    if (data.GetCell(cx, cy + 1) != RoadCellType.Empty || data.GetCell(cx + 1, cy + 1) != RoadCellType.Empty) return;
+                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_EW || data.GetCell(cx + 1, cy) != RoadCellType.Straight_EW) return;
+                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_N_Left);
+                                    data.SetCell(cx + 1, cy, RoadCellType.HalfT_BusStop_N_Right);
+                                    data.SetCell(cx, cy + 1, RoadCellType.DeadEnd_N);
+                                    data.SetCell(cx + 1, cy + 1, RoadCellType.DeadEnd_N);
+                                });
+                            }
                         }
                     }
 
-                    // Vertical stops (2 cells tall)
-                    if (y + 1 < data.gridHeight && data.GetCell(x, y) == RoadCellType.GenericRoad && data.GetCell(x, y + 1) == RoadCellType.GenericRoad)
+                    // South Bus Stop (requires 2 Straight_EW, and 2 Empty below)
+                    if (x + 1 < data.gridWidth && data.GetCell(x, y) == RoadCellType.Straight_EW && data.GetCell(x + 1, y) == RoadCellType.Straight_EW)
                     {
-                        if (IsProtectedBoardingArea(x, y + 1, data.gridWidth)) continue;
-                        // Check Rightwards
-                        if (x + 1 < data.gridWidth)
+                        if (y - 1 >= 0 && data.GetCell(x, y - 1) == RoadCellType.Empty && data.GetCell(x + 1, y - 1) == RoadCellType.Empty)
                         {
-                            int cx_ = x, cy_ = y;
-                            candidates.Add(() => {
-                                if (data.GetCell(cx_ + 1, cy_) == RoadCellType.Empty && data.GetCell(cx_ + 1, cy_ + 1) == RoadCellType.Empty)
-                                {
-                                    if (cy_ - 1 >= 0 && data.GetCell(cx_ + 1, cy_ - 1) != RoadCellType.Empty) return false;
-                                    if (cy_ + 2 < data.gridHeight && data.GetCell(cx_ + 1, cy_ + 2) != RoadCellType.Empty) return false;
-                                    if (cx_ + 2 < data.gridWidth && data.GetCell(cx_ + 2, cy_) != RoadCellType.Empty) return false;
-                                    if (cx_ + 2 < data.gridWidth && data.GetCell(cx_ + 2, cy_ + 1) != RoadCellType.Empty) return false;
-
-                                    data.SetCell(cx_ + 1, cy_, RoadCellType.GenericRoad);
-                                    data.SetCell(cx_ + 1, cy_ + 1, RoadCellType.GenericRoad);
-                                    return true;
-                                }
-                                return false;
-                            });
+                            if (IsIsolatedBusStopCells(data, x, y - 1, x + 1, y - 1, x, y, x + 1, y))
+                            {
+                                int cx = x, cy = y;
+                                candidates.Add(() => {
+                                    if (data.GetCell(cx, cy - 1) != RoadCellType.Empty || data.GetCell(cx + 1, cy - 1) != RoadCellType.Empty) return;
+                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_EW || data.GetCell(cx + 1, cy) != RoadCellType.Straight_EW) return;
+                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_S_Right);
+                                    data.SetCell(cx + 1, cy, RoadCellType.HalfT_BusStop_S_Left);
+                                    data.SetCell(cx, cy - 1, RoadCellType.DeadEnd_S);
+                                    data.SetCell(cx + 1, cy - 1, RoadCellType.DeadEnd_S);
+                                });
+                            }
                         }
-                        // Check Leftwards
-                        if (x - 1 >= 0)
-                        {
-                            int cx_ = x, cy_ = y;
-                            candidates.Add(() => {
-                                if (data.GetCell(cx_ - 1, cy_) == RoadCellType.Empty && data.GetCell(cx_ - 1, cy_ + 1) == RoadCellType.Empty)
-                                {
-                                    if (cy_ - 1 >= 0 && data.GetCell(cx_ - 1, cy_ - 1) != RoadCellType.Empty) return false;
-                                    if (cy_ + 2 < data.gridHeight && data.GetCell(cx_ - 1, cy_ + 2) != RoadCellType.Empty) return false;
-                                    if (cx_ - 2 >= 0 && data.GetCell(cx_ - 2, cy_) != RoadCellType.Empty) return false;
-                                    if (cx_ - 2 >= 0 && data.GetCell(cx_ - 2, cy_ + 1) != RoadCellType.Empty) return false;
+                    }
 
-                                    data.SetCell(cx_ - 1, cy_, RoadCellType.GenericRoad);
-                                    data.SetCell(cx_ - 1, cy_ + 1, RoadCellType.GenericRoad);
-                                    return true;
-                                }
-                                return false;
-                            });
+                    // East Bus Stop (requires 2 Straight_NS, and 2 Empty right)
+                    if (y + 1 < data.gridHeight && data.GetCell(x, y) == RoadCellType.Straight_NS && data.GetCell(x, y + 1) == RoadCellType.Straight_NS)
+                    {
+                        if (x + 1 < data.gridWidth && data.GetCell(x + 1, y) == RoadCellType.Empty && data.GetCell(x + 1, y + 1) == RoadCellType.Empty)
+                        {
+                            if (IsIsolatedBusStopCells(data, x + 1, y, x + 1, y + 1, x, y, x, y + 1))
+                            {
+                                int cx = x, cy = y;
+                                candidates.Add(() => {
+                                    if (data.GetCell(cx + 1, cy) != RoadCellType.Empty || data.GetCell(cx + 1, cy + 1) != RoadCellType.Empty) return;
+                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_NS || data.GetCell(cx, cy + 1) != RoadCellType.Straight_NS) return;
+                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_E_Right);
+                                    data.SetCell(cx, cy + 1, RoadCellType.HalfT_BusStop_E_Left);
+                                    data.SetCell(cx + 1, cy, RoadCellType.DeadEnd_E);
+                                    data.SetCell(cx + 1, cy + 1, RoadCellType.DeadEnd_E);
+                                });
+                            }
+                        }
+                    }
+
+                    // West Bus Stop (requires 2 Straight_NS, and 2 Empty left)
+                    if (y + 1 < data.gridHeight && data.GetCell(x, y) == RoadCellType.Straight_NS && data.GetCell(x, y + 1) == RoadCellType.Straight_NS)
+                    {
+                        if (x - 1 >= 0 && data.GetCell(x - 1, y) == RoadCellType.Empty && data.GetCell(x - 1, y + 1) == RoadCellType.Empty)
+                        {
+                            if (IsIsolatedBusStopCells(data, x - 1, y, x - 1, y + 1, x, y, x, y + 1))
+                            {
+                                int cx = x, cy = y;
+                                candidates.Add(() => {
+                                    if (data.GetCell(cx - 1, cy) != RoadCellType.Empty || data.GetCell(cx - 1, cy + 1) != RoadCellType.Empty) return;
+                                    if (data.GetCell(cx, cy) != RoadCellType.Straight_NS || data.GetCell(cx, cy + 1) != RoadCellType.Straight_NS) return;
+                                    data.SetCell(cx, cy, RoadCellType.HalfT_BusStop_W_Left);
+                                    data.SetCell(cx, cy + 1, RoadCellType.HalfT_BusStop_W_Right);
+                                    data.SetCell(cx - 1, cy, RoadCellType.DeadEnd_W);
+                                    data.SetCell(cx - 1, cy + 1, RoadCellType.DeadEnd_W);
+                                });
+                            }
                         }
                     }
                 }
             }
 
-            // Shuffle and place
+            // Shuffle candidates
             for (int i = candidates.Count - 1; i > 0; i--)
             {
                 int j = Random.Range(0, i + 1);
                 var tmp = candidates[i]; candidates[i] = candidates[j]; candidates[j] = tmp;
             }
 
+            int placed = 0;
             foreach (var act in candidates)
             {
-                if (numBusStops <= 0) break;
-                if (act.Invoke()) numBusStops--;
+                if (placed >= data.busStopLength) break;
+                
+                int priorEmpty = 0;
+                for (int i=0; i<data.gridWidth * data.gridHeight; i++) if (data.grid[i] == RoadCellType.Empty) priorEmpty++;
+
+                act.Invoke();
+
+                int afterEmpty = 0;
+                for (int i=0; i<data.gridWidth * data.gridHeight; i++) if (data.grid[i] == RoadCellType.Empty) afterEmpty++;
+
+                if (afterEmpty < priorEmpty) placed++;
             }
+
+            return placed >= data.busStopLength;
         }
 
         private void AddCornerBendsOrganic(LevelDesignData data, int complexity)
@@ -567,6 +490,26 @@ namespace BusAway.LevelEditor
             }
         }
 
+        private bool IsPerfectLoop(LevelDesignData data)
+        {
+            for (int y = 0; y < data.gridHeight; y++)
+            {
+                for (int x = 0; x < data.gridWidth; x++)
+                {
+                    if (data.GetCell(x, y) == RoadCellType.Empty) continue;
+                    
+                    int neighbors = 0;
+                    if (x > 0 && data.GetCell(x - 1, y) != RoadCellType.Empty) neighbors++;
+                    if (x < data.gridWidth - 1 && data.GetCell(x + 1, y) != RoadCellType.Empty) neighbors++;
+                    if (y > 0 && data.GetCell(x, y - 1) != RoadCellType.Empty) neighbors++;
+                    if (y < data.gridHeight - 1 && data.GetCell(x, y + 1) != RoadCellType.Empty) neighbors++;
+                    
+                    if (neighbors != 2) return false;
+                }
+            }
+            return true;
+        }
+
         private bool TryCarveNotch(LevelDesignData data, int ex, int ey, bool horizontal, int outDir, int width)
         {
             var edgeCells = new System.Collections.Generic.List<(int, int)>();
@@ -593,7 +536,6 @@ namespace BusAway.LevelEditor
                 if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
                 if (IsProtectedBoardingArea(cx, cy, data.gridWidth)) return false;
                 if (data.GetCell(cx, cy) != RoadCellType.GenericRoad) return false;
-                // Ensure it's a completely straight piece before removing
                 if (horizontal && (data.GetCell(cx, cy - 1) != RoadCellType.Empty || data.GetCell(cx, cy + 1) != RoadCellType.Empty)) return false;
                 if (!horizontal && (data.GetCell(cx - 1, cy) != RoadCellType.Empty || data.GetCell(cx + 1, cy) != RoadCellType.Empty)) return false;
             }
@@ -603,8 +545,18 @@ namespace BusAway.LevelEditor
                 if (data.GetCell(cx, cy) != RoadCellType.Empty) return false;
             }
 
+            // Apply tentatively
             foreach (var (cx, cy) in edgeCells) data.SetCell(cx, cy, RoadCellType.Empty);
             foreach (var (cx, cy) in notchCells) data.SetCell(cx, cy, RoadCellType.GenericRoad);
+
+            if (data.enforcePerfectLoop && !IsPerfectLoop(data))
+            {
+                // Revert
+                foreach (var (cx, cy) in notchCells) data.SetCell(cx, cy, RoadCellType.Empty);
+                foreach (var (cx, cy) in edgeCells) data.SetCell(cx, cy, RoadCellType.GenericRoad);
+                return false;
+            }
+
             return true;
         }
 
@@ -614,7 +566,6 @@ namespace BusAway.LevelEditor
 
             var removeCells = new System.Collections.Generic.List<(int, int)>();
             var newCells = new System.Collections.Generic.List<(int, int)>();
-            var protectedCells = new System.Collections.Generic.List<(int, int)>();
 
             removeCells.Add((ex, ey));
 
@@ -628,13 +579,7 @@ namespace BusAway.LevelEditor
                 newCells.Add((ex, r2));
                 newCells.Add((ex + sDir, r2));
                 newCells.Add((ex + sDir, r1));
-
-                protectedCells.Add((ex - sDir * 2, r1));
-                protectedCells.Add((ex - sDir, r2));
-                protectedCells.Add((ex + sDir * 2, r1));
-                protectedCells.Add((ex + sDir * 2, r2));
-                protectedCells.Add((ex, r2 + outDir));
-                protectedCells.Add((ex + sDir, r2 + outDir));
+                removeCells.Add((ex + sDir, ey));
             }
             else
             {
@@ -646,13 +591,7 @@ namespace BusAway.LevelEditor
                 newCells.Add((c2, ey));
                 newCells.Add((c2, ey + sDir));
                 newCells.Add((c1, ey + sDir));
-
-                protectedCells.Add((c1, ey - sDir * 2));
-                protectedCells.Add((c2, ey - sDir));
-                protectedCells.Add((c1, ey + sDir * 2));
-                protectedCells.Add((c2, ey + sDir * 2));
-                protectedCells.Add((c2 + outDir, ey));
-                protectedCells.Add((c2 + outDir, ey + sDir));
+                removeCells.Add((ex, ey + sDir));
             }
 
             foreach (var (cx, cy) in removeCells)
@@ -668,16 +607,19 @@ namespace BusAway.LevelEditor
                 if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
                 if (data.GetCell(cx, cy) != RoadCellType.Empty) return false;
             }
-            foreach (var (cx, cy) in protectedCells)
-            {
-                if (cx >= 0 && cx < data.gridWidth && cy >= 0 && cy < data.gridHeight)
-                {
-                    if (data.GetCell(cx, cy) != RoadCellType.Empty) return false;
-                }
-            }
 
+            // Apply tentatively
             foreach (var (cx, cy) in removeCells) data.SetCell(cx, cy, RoadCellType.Empty);
             foreach (var (cx, cy) in newCells) data.SetCell(cx, cy, RoadCellType.GenericRoad);
+
+            if (data.enforcePerfectLoop && !IsPerfectLoop(data))
+            {
+                // Revert
+                foreach (var (cx, cy) in newCells) data.SetCell(cx, cy, RoadCellType.Empty);
+                foreach (var (cx, cy) in removeCells) data.SetCell(cx, cy, RoadCellType.GenericRoad);
+                return false;
+            }
+
             return true;
         }
 
