@@ -36,7 +36,7 @@ namespace BusAway.LevelEditor
                 GUILayout.Space(10);
                 GUILayout.Label("Map Editor (Click to toggle)", EditorStyles.boldLabel);
 
-                for (int y = 0; y < data.gridHeight; y++)
+                for (int y = data.gridHeight - 1; y >= 0; y--) // y=max at top = screen top
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
@@ -64,7 +64,6 @@ namespace BusAway.LevelEditor
                         GUI.backgroundColor = btnColor;
                         if (GUILayout.Button(label, GUILayout.Width(25), GUILayout.Height(25)))
                         {
-                            bool isBusStop = cell >= RoadCellType.BusStop_1_N && cell <= RoadCellType.BusStop_2_W;
                             if (cell == RoadCellType.Empty)
                                 data.grid[index] = RoadCellType.GenericRoad;
                             else if (!isBusStop)

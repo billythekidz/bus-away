@@ -56,8 +56,11 @@ namespace BusAway.Gameplay
             roadRoot.transform.SetParent(this.transform);
 
             float tSize = activeLevelData.tileSize;
-            float offsetX = -(activeLevelData.gridWidth * tSize) / 2f + (tSize / 2f);
-            float offsetZ = -(activeLevelData.gridHeight * tSize) / 2f + (tSize / 2f);
+            // Camera is rotated 180° on Y-axis, so we flip both X and Z
+            // so that grid[x,y] visually maps: x+ = screen-right, y+ = screen-up
+            float offsetX = (activeLevelData.gridWidth  * tSize) / 2f - (tSize / 2f);
+            float offsetZ = (activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
+            const float camFlip = 180f; // Add to all rotY values to align with flipped camera
 
             Material roadCoreMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit")) { color = new Color(0.2f, 0.22f, 0.28f, 1f) };
             Material roadBorderMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit")) { color = Color.white };
@@ -75,56 +78,57 @@ namespace BusAway.Gameplay
 
                     switch (cell)
                     {
-                        case RoadCellType.Straight_NS: prefabTemplate = tileStraightPrefab; rotY = 0f; shapeTypeStr = "Straight"; break;
-                        case RoadCellType.Straight_EW: prefabTemplate = tileStraightPrefab; rotY = 90f; shapeTypeStr = "Straight"; break;
+                        case RoadCellType.Straight_NS: prefabTemplate = tileStraightPrefab; rotY = camFlip + 0f;   shapeTypeStr = "Straight"; break;
+                        case RoadCellType.Straight_EW: prefabTemplate = tileStraightPrefab; rotY = camFlip + 90f;  shapeTypeStr = "Straight"; break;
 
-                        case RoadCellType.Corner_SE: prefabTemplate = tileCornerPrefab; rotY = 0f; shapeTypeStr = "Corner"; break;
-                        case RoadCellType.Corner_NE: prefabTemplate = tileCornerPrefab; rotY = -90f; shapeTypeStr = "Corner"; break;
-                        case RoadCellType.Corner_NW: prefabTemplate = tileCornerPrefab; rotY = 180f; shapeTypeStr = "Corner"; break;
-                        case RoadCellType.Corner_SW: prefabTemplate = tileCornerPrefab; rotY = 90f; shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_SE: prefabTemplate = tileCornerPrefab; rotY = camFlip + 0f;   shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_NE: prefabTemplate = tileCornerPrefab; rotY = camFlip - 90f;  shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_NW: prefabTemplate = tileCornerPrefab; rotY = camFlip + 180f; shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_SW: prefabTemplate = tileCornerPrefab; rotY = camFlip + 90f;  shapeTypeStr = "Corner"; break;
 
-                        case RoadCellType.InnerCorner_SE: prefabTemplate = tileInnerCornerPrefab; rotY = 0f; shapeTypeStr = "InnerCorner"; break;
-                        case RoadCellType.InnerCorner_NE: prefabTemplate = tileInnerCornerPrefab; rotY = -90f; shapeTypeStr = "InnerCorner"; break;
-                        case RoadCellType.InnerCorner_NW: prefabTemplate = tileInnerCornerPrefab; rotY = 180f; shapeTypeStr = "InnerCorner"; break;
-                        case RoadCellType.InnerCorner_SW: prefabTemplate = tileInnerCornerPrefab; rotY = 90f; shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_SE: prefabTemplate = tileInnerCornerPrefab; rotY = camFlip + 0f;   shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_NE: prefabTemplate = tileInnerCornerPrefab; rotY = camFlip - 90f;  shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_NW: prefabTemplate = tileInnerCornerPrefab; rotY = camFlip + 180f; shapeTypeStr = "InnerCorner"; break;
+                        case RoadCellType.InnerCorner_SW: prefabTemplate = tileInnerCornerPrefab; rotY = camFlip + 90f;  shapeTypeStr = "InnerCorner"; break;
 
-                        case RoadCellType.TJunction_E: prefabTemplate = tileTJunctionPrefab; rotY = 0f; shapeTypeStr = "TJunction"; break;
-                        case RoadCellType.TJunction_S: prefabTemplate = tileTJunctionPrefab; rotY = 90f; shapeTypeStr = "TJunction"; break;
-                        case RoadCellType.TJunction_W: prefabTemplate = tileTJunctionPrefab; rotY = 180f; shapeTypeStr = "TJunction"; break;
-                        case RoadCellType.TJunction_N: prefabTemplate = tileTJunctionPrefab; rotY = -90f; shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_E: prefabTemplate = tileTJunctionPrefab; rotY = camFlip + 0f;   shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_S: prefabTemplate = tileTJunctionPrefab; rotY = camFlip + 90f;  shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_W: prefabTemplate = tileTJunctionPrefab; rotY = camFlip + 180f; shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.TJunction_N: prefabTemplate = tileTJunctionPrefab; rotY = camFlip - 90f;  shapeTypeStr = "TJunction"; break;
 
-                        case RoadCellType.Cross: prefabTemplate = tileCrossPrefab; rotY = 0f; shapeTypeStr = "Cross"; break;
+                        case RoadCellType.Cross: prefabTemplate = tileCrossPrefab; rotY = camFlip; shapeTypeStr = "Cross"; break;
 
-                        case RoadCellType.DeadEnd_N: prefabTemplate = tileDeadEndPrefab; rotY = 0f; shapeTypeStr = "DeadEnd"; break;
-                        case RoadCellType.DeadEnd_E: prefabTemplate = tileDeadEndPrefab; rotY = 90f; shapeTypeStr = "DeadEnd"; break;
-                        case RoadCellType.DeadEnd_S: prefabTemplate = tileDeadEndPrefab; rotY = 180f; shapeTypeStr = "DeadEnd"; break;
-                        case RoadCellType.DeadEnd_W: prefabTemplate = tileDeadEndPrefab; rotY = -90f; shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_N: prefabTemplate = tileDeadEndPrefab; rotY = camFlip + 0f;   shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_E: prefabTemplate = tileDeadEndPrefab; rotY = camFlip + 90f;  shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_S: prefabTemplate = tileDeadEndPrefab; rotY = camFlip + 180f; shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_W: prefabTemplate = tileDeadEndPrefab; rotY = camFlip - 90f;  shapeTypeStr = "DeadEnd"; break;
 
                         case RoadCellType.BusStop_1_N:
                         case RoadCellType.BusStop_2_N:
                             prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
-                            rotY = 0f; shapeTypeStr = "BusStop"; break;
+                            rotY = camFlip + 0f; shapeTypeStr = "BusStop"; break;
 
                         case RoadCellType.BusStop_1_E:
                         case RoadCellType.BusStop_2_E:
                             prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
-                            rotY = 90f; shapeTypeStr = "BusStop"; break;
+                            rotY = camFlip + 90f; shapeTypeStr = "BusStop"; break;
 
                         case RoadCellType.BusStop_1_S:
                         case RoadCellType.BusStop_2_S:
                             prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
-                            rotY = 180f; shapeTypeStr = "BusStop"; break;
+                            rotY = camFlip + 180f; shapeTypeStr = "BusStop"; break;
 
                         case RoadCellType.BusStop_1_W:
                         case RoadCellType.BusStop_2_W:
                             prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
-                            rotY = -90f; shapeTypeStr = "BusStop"; break;
+                            rotY = camFlip - 90f; shapeTypeStr = "BusStop"; break;
 
                         case RoadCellType.GenericRoad:
-                            prefabTemplate = tileStraightPrefab; rotY = 0f; shapeTypeStr = "Straight"; break;
+                            prefabTemplate = tileStraightPrefab; rotY = camFlip; shapeTypeStr = "Straight"; break;
                     }
 
-                    Vector3 pos = new Vector3(offsetX + x * tSize, 0, offsetZ + y * tSize);
+                    // Flip X and Z to match camera's 180° Y rotation
+                    Vector3 pos = new Vector3(offsetX - x * tSize, 0, offsetZ - y * tSize);
                     GameObject tileObj;
 
                     if (prefabTemplate != null)
