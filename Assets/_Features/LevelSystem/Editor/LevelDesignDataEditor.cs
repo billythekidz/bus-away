@@ -98,6 +98,67 @@ namespace BusAway.LevelEditor
             GUILayout.Space(15);
             DrawDefaultInspector();
 
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("── Crowd Lands ──", EditorStyles.boldLabel);
+
+            // Min/Max land count with validation
+            EditorGUI.BeginChangeCheck();
+            int newMin = EditorGUILayout.IntSlider("Min Land Count", data.minLandCount, 2, 5);
+            int newMax = EditorGUILayout.IntSlider("Max Land Count", data.maxLandCount, 2, 5);
+            if (newMin > newMax) newMin = newMax;
+            data.minLandCount = newMin;
+            data.maxLandCount = newMax;
+
+            // Min/Max agents per land (multiple of 4 enforced)
+            int rawMinAgents = EditorGUILayout.IntField("Min Agents Per Land", data.minAgentsPerLand);
+            int rawMaxAgents = EditorGUILayout.IntField("Max Agents Per Land", data.maxAgentsPerLand);
+            data.minAgentsPerLand = Mathf.Max(4, (rawMinAgents / 4) * 4); // clamp to multiple of 4
+            data.maxAgentsPerLand = Mathf.Max(data.minAgentsPerLand, (rawMaxAgents / 4) * 4);
+
+            EditorGUILayout.HelpBox(
+                $"Rows per land: {data.minAgentsPerLand/4}–{data.maxAgentsPerLand/4} " +
+                $"({data.minAgentsPerLand}–{data.maxAgentsPerLand} agents)",
+                MessageType.Info);
+
+            // Color palette with visual swatches
+            EditorGUILayout.LabelField("Land Color Palette", EditorStyles.boldLabel);
+            if (data.landColorPalette == null) data.landColorPalette = new List<Color>();
+
+            // Show warning if palette < maxLandCount
+            if (data.landColorPalette.Count < data.maxLandCount)
+            {
+                EditorGUILayout.HelpBox(
+                    $"Palette has {data.landColorPalette.Count} colors but maxLandCount={data.maxLandCount}. Add more colors.",
+                    MessageType.Warning);
+            }
+
+            // Draw color swatches inline
+            EditorGUILayout.BeginHorizontal();
+            for (int i = 0; i < data.landColorPalette.Count; i++)
+            {
+                data.landColorPalette[i] = EditorGUILayout.ColorField(GUIContent.none, data.landColorPalette[i], false, true, false, GUILayout.Width(40));
+            }
+            if (GUILayout.Button("+", GUILayout.Width(24))) data.landColorPalette.Add(Color.white);
+            if (data.landColorPalette.Count > 0 && GUILayout.Button("-", GUILayout.Width(24)))
+                data.landColorPalette.RemoveAt(data.landColorPalette.Count - 1);
+            EditorGUILayout.EndHorizontal();
+
+            if (data.resolvedLands != null && data.resolvedLands.Count > 0)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Preview: Resolved Lands (last build)", EditorStyles.miniLabel);
+                int total = 0;
+                foreach (var land in data.resolvedLands)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.ColorField(GUIContent.none, land.color, false, false, false, GUILayout.Width(40));
+                    EditorGUILayout.LabelField($"{land.agentCount} agents ({land.agentCount/4} rows)");
+                    total += land.agentCount;
+                    EditorGUILayout.EndHorizontal();
+                }
+                EditorGUILayout.LabelField($"Total: {total} agents", EditorStyles.boldLabel);
+            }
+
             if (GUI.changed)
             {
                 EditorUtility.SetDirty(data);

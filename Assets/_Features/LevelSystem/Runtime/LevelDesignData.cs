@@ -69,6 +69,13 @@ namespace BusAway.Level
         public Color busColor = Color.white;
     }
 
+    [System.Serializable]
+    public class CrowdLandConfig
+    {
+        public int agentCount;   // Must be multiple of 4
+        public Color color;
+    }
+
     [CreateAssetMenu(fileName = "Level_001", menuName = "Bus Away/Level Design Data")]
     public class LevelDesignData : ScriptableObject
     {
@@ -90,6 +97,25 @@ namespace BusAway.Level
         [Header("Passenger Queue")]
         [Tooltip("Ordered list of passenger colors to spawn during gameplay")]
         public List<Color> passengerQueueOrder = new List<Color>();
+
+        [Header("Crowd Lands")]
+        [HideInInspector]
+        public int minLandCount = 2;
+
+        [HideInInspector]
+        public int maxLandCount = 4;
+
+        [HideInInspector]
+        public int minAgentsPerLand = 8;
+
+        [HideInInspector]
+        public int maxAgentsPerLand = 24;
+
+        [HideInInspector]
+        public List<Color> landColorPalette = new List<Color>();
+
+        [HideInInspector]
+        public List<CrowdLandConfig> resolvedLands = new List<CrowdLandConfig>();
 
         public RoadCellType GetCell(int x, int y)
         {

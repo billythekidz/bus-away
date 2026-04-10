@@ -280,6 +280,9 @@ namespace BusAway.Gameplay
                 busObj.transform.eulerAngles = busData.eulerAngles;
             }
             
+            // 3. Build Crowd Lands
+            BuildCrowdLands();
+
             Debug.Log($"<color=cyan>Level Build Complete!</color> Autotiled grid.");
 
             // 3. Auto-Frame Camera
@@ -296,6 +299,52 @@ namespace BusAway.Gameplay
         {
             var cell = activeLevelData.GetCell(x, y);
             return cell != RoadCellType.Empty;
+        }
+
+        private void BuildCrowdLands()
+        {
+            if (activeLevelData == null) return;
+            // Note: CrowdManager integration will be added in the next step, skipping the call for now if it doesn't exist
+            // CrowdManager.Instance...
+
+            int landCount = Random.Range(activeLevelData.minLandCount, activeLevelData.maxLandCount + 1);
+
+            var palette = new System.Collections.Generic.List<Color>(activeLevelData.landColorPalette);
+            ShuffleList(palette);
+
+            activeLevelData.resolvedLands.Clear();
+
+            int totalAgents = 0;
+            for (int i = 0; i < landCount; i++)
+            {
+                int minRows = activeLevelData.minAgentsPerLand / 4;
+                int maxRows = activeLevelData.maxAgentsPerLand / 4;
+                int rows = Random.Range(minRows, maxRows + 1);
+                int count = rows * 4;
+
+                var landCfg = new CrowdLandConfig
+                {
+                    agentCount = count,
+                    color = (i < palette.Count) ? palette[i] : Color.white
+                };
+                activeLevelData.resolvedLands.Add(landCfg);
+                totalAgents += count;
+            }
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying) UnityEditor.EditorUtility.SetDirty(activeLevelData);
+#endif
+
+            Debug.Log($"<color=lime>CrowdLands Built:</color> {landCount} lands, total agents = {totalAgents}");
+        }
+
+        private void ShuffleList<T>(System.Collections.Generic.List<T> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
         }
 
         [ContextMenu("Clear Map")]
