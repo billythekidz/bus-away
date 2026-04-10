@@ -26,16 +26,39 @@ namespace BusAway.CrowdSystem
         public NativeArray<float3> positions;
         public NativeArray<float3> velocities;
 
+        [ReadOnly] public NativeArray<int> states;
+
         public void Execute(int index)
         {
             float3 currentPos = positions[index];
             float3 targetPos = targets[index];
             float3 currentVel = velocities[index];
+            int state = states[index];
 
-            // 1. Move to Target logic
             float3 toTarget = targetPos - currentPos;
             float distToTarget = math.length(toTarget);
             
+            // STATE 0: In Land (Rigid Block Movement, "đồng loạt toàn khối")
+            if (state == 0)
+            {
+                // Move uniformly without pushing each other
+                if (distToTarget > 0.001f)
+                {
+                    float step = moveSpeed * deltaTime;
+                    if (distToTarget <= step) 
+                    {
+                        positions[index] = targetPos;
+                    } 
+                    else 
+                    {
+                        positions[index] = currentPos + (toTarget / distToTarget) * step;
+                    }
+                }
+                velocities[index] = float3.zero;
+                return;
+            }
+
+            // STATE 1: Boids Mode (Moving to BusWaitZone)
             float3 desiredVel = float3.zero;
 
             if (distToTarget > arrivalDistance)
@@ -43,7 +66,7 @@ namespace BusAway.CrowdSystem
                 desiredVel = (toTarget / distToTarget) * moveSpeed * targetWeight;
             }
 
-            // 2. Separation logic (O(N) check per agent but fast in Burst for N < 2000)
+            // Omni-directional Separation logic for Boids clustering
             float3 separationForce = float3.zero;
             int neighborCount = 0;
             float sqrSeparationRadius = separationRadius * separationRadius;
@@ -52,28 +75,36 @@ namespace BusAway.CrowdSystem
             {
                 if (i == index) continue;
 
+                // Chỉ quan tâm boids khác đang di chuyển hoặc cản đường
+                // (Thực tế Boids có thể phớt lờ những người còn ở trong Land nếu muốn, 
+                // nhưng dẹp chung cũng không sao vì bán kính nhỏ)
                 float3 otherPos = allPositions[i];
                 float3 offset = currentPos - otherPos;
+                
                 float sqrDist = math.lengthsq(offset);
 
                 if (sqrDist < sqrSeparationRadius && sqrDist > 0.0001f)
                 {
                     float dist = math.sqrt(sqrDist);
-                    // Force is stronger when closer
-                    separationForce += (offset / dist) * ((separationRadius - dist) / separationRadius);
+                    // Lực đẩy mềm hơn một chút để swarming trong vùng tụ tập
+                    float ratio = 1.0f - (dist / separationRadius);
+                    float forceStrength = ratio * 5.0f; 
+                    
+                    float3 sepDir = offset / dist; // Omni-directional
+                    separationForce += sepDir * forceStrength;
                     neighborCount++;
                 }
             }
 
             if (neighborCount > 0)
             {
+                // Average out the accumulated forces
                 separationForce /= neighborCount;
                 desiredVel += separationForce * moveSpeed * separationWeight;
             }
 
-            // 3. Update velocity and position
-            // Simple interpolation for smooth velocity changes
-            float3 newVel = math.lerp(currentVel, desiredVel, deltaTime * 10f); // 10f is responsiveness
+            // Update velocity and position smoothly
+            float3 newVel = math.lerp(currentVel, desiredVel, deltaTime * 10f);
             velocities[index] = newVel;
             positions[index] = currentPos + newVel * deltaTime;
         }

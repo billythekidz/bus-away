@@ -1,6 +1,6 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace BusMovement
 {
@@ -15,7 +15,8 @@ namespace BusMovement
         public Transform busWallR;
         public Transform busWallB;
         public Transform busWallL;
-        
+
+
         [Header("Wheels")]
         public Transform wheelFL;
         public Transform wheelFR;
@@ -51,7 +52,8 @@ namespace BusMovement
             // Dynamically wrap the visuals so we can wobble/jerk them together cleanly
             visualContainer = new GameObject("VisualContainer").transform;
             visualContainer.SetParent(transform, false);
-            
+
+
             if (busFloor) busFloor.SetParent(visualContainer, true);
             if (busWallF) busWallF.SetParent(visualContainer, true);
             if (busWallR) busWallR.SetParent(visualContainer, true);
@@ -60,9 +62,10 @@ namespace BusMovement
 
             if (skidMarks != null)
             {
-                foreach(var sm in skidMarks)
+                foreach (var sm in skidMarks)
                 {
-                    if (sm != null) 
+                    if (sm != null)
+
                     {
                         sm.time *= 0.33f;
                     }
@@ -96,7 +99,7 @@ namespace BusMovement
         {
             if (moveSequence.isAlive)
             {
-                float distanceMoved =  Vector3.Distance(transform.position, lastPos);
+                float distanceMoved = Vector3.Distance(transform.position, lastPos);
                 if (distanceMoved > 0.0001f)
                 {
                     float rotDelta = (distanceMoved / (2f * Mathf.PI * wheelRadius)) * 360f;
@@ -114,18 +117,22 @@ namespace BusMovement
             wobbleTween.Stop();
             brakeSequence.Stop();
             StopVibration();
-            
-            if (visualContainer) 
+
+
+            if (visualContainer)
+
             {
                 visualContainer.localRotation = Quaternion.identity;
                 visualContainer.localPosition = Vector3.zero;
             }
-            
+
+
             if (exhaustVFX != null && !exhaustVFX.isPlaying) exhaustVFX.Play();
             SetSkidMarksEmitting(true);
 
             moveSequence = PrimeTween.Sequence.Create();
-            
+
+
             Vector3 currentPos = transform.position;
 
             foreach (var point in pathPoints)
@@ -133,7 +140,8 @@ namespace BusMovement
                 Vector3 targetFlat = new Vector3(point.x, transform.position.y, point.z);
                 float distance = Vector3.Distance(currentPos, targetFlat);
                 if (distance < 0.01f) continue;
-                
+
+
                 float duration = distance / moveSpeed;
 
                 // Translation & Rotation in parallel
@@ -146,8 +154,10 @@ namespace BusMovement
                     Quaternion startRot = transform.rotation;
                     Quaternion targetRot = Quaternion.LookRotation(direction);
                     float rotDuration = Mathf.Min(duration, duration * 0.75f); // Soft curve cornering
-                    
-                    moveSequence.Group(PrimeTween.Tween.Custom(0f, 1f, rotDuration, onValueChange: t => 
+
+
+                    moveSequence.Group(PrimeTween.Tween.Custom(0f, 1f, rotDuration, onValueChange: t =>
+
                     {
                         if (this != null && transform != null)
                             transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
@@ -174,7 +184,8 @@ namespace BusMovement
                     brakeSequence = PrimeTween.Sequence.Create()
                         .Chain(PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad))
                         .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce))
-                        .OnComplete(() => {
+                        .OnComplete(() =>
+                        {
                             StartVibration();
                             OnPathComplete?.Invoke(this);
                         });
@@ -185,7 +196,8 @@ namespace BusMovement
                 }
             });
         }
-        
+
+
         private void SpinWheels(float degreesDelta)
         {
             if (wheelFL) wheelFL.Rotate(degreesDelta, 0, 0, Space.Self);
@@ -198,7 +210,7 @@ namespace BusMovement
         {
             if (skidMarks != null)
             {
-                foreach(var mk in skidMarks)
+                foreach (var mk in skidMarks)
                 {
                     if (mk != null) mk.emitting = emit;
                 }
@@ -233,11 +245,13 @@ namespace BusMovement
         private void ApplyColorToProp(Transform part, Color color)
         {
             if (part == null) return;
-            
+
             // Tìm Renderer trên chính object đó hoặc thư mục con
+
             var renderer = part.GetComponent<Renderer>();
             if (renderer == null) renderer = part.GetComponentInChildren<Renderer>();
-            
+
+
             if (renderer != null)
             {
                 // Dùng MaterialPropertyBlock để đổi màu mà không cần sinh thêm (instantiate) Material mới -> Optimize hiệu năng

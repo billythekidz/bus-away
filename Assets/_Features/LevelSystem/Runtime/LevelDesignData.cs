@@ -65,6 +65,12 @@ namespace BusAway.Level
         public Color color;
     }
 
+    [System.Serializable]
+    public class CrowdLandGroup
+    {
+        public List<CrowdLandConfig> chunks = new List<CrowdLandConfig>();
+    }
+
     [CreateAssetMenu(fileName = "Level_001", menuName = "Bus Away/Level Design Data")]
     public class LevelDesignData : ScriptableObject
     {
@@ -124,7 +130,7 @@ namespace BusAway.Level
         public List<Color> landColorPalette = new List<Color>();
 
         [HideInInspector]
-        public List<CrowdLandConfig> resolvedLands = new List<CrowdLandConfig>();
+        public List<CrowdLandGroup> resolvedLands = new List<CrowdLandGroup>();
 
         public RoadCellType GetCell(int x, int y)
         {

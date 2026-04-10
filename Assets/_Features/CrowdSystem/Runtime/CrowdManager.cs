@@ -10,9 +10,12 @@ namespace BusAway.CrowdSystem
 {
     public class CrowdManager : MonoBehaviour
     {
+        public enum SpawnMode { Prefab, InstancedMesh }
+
         public static CrowdManager Instance { get; private set; }
 
         [Header("Settings")]
+        public SpawnMode spawnMode = SpawnMode.Prefab;
         public int maxAgents = 1000;
         public float moveSpeed = 3f;
         public float separationRadius = 1.0f;
@@ -21,12 +24,14 @@ namespace BusAway.CrowdSystem
         public float arrivalDistance = 0.1f;
 
         [Header("Land Spawning")]
-        public float landSpacingX = 0.8f;
+        public float landSpacingX = 3.0f;
         public float landRoadSpacingZ = 1.0f;
         public float agentSpacingX = 0.6f;
         public float agentSpacingZ = 0.6f;
         public Vector3 landBaseOffset = new Vector3(0, 0, -2.0f);
         public int rowsPerLand = 6;
+        [Tooltip("Số lượng gạch đường thẳng cố định của bãi đỗ, không bị co giãn khi đổi Agent Spacing")]
+        public int landFixedRoadPieces = 5;
         public GameObject straightRoadPrefab;
 
         [Header("Rendering")]
@@ -39,12 +44,16 @@ namespace BusAway.CrowdSystem
             public Matrix4x4 localMatrix;
         }
         private List<SubMeshInfo> subMeshes = new List<SubMeshInfo>();
+        
+        // Prefab mode list
+        private GameObject[] agentPrefabs;
 
         // Native Arrays for Jobs
         private NativeArray<float3> positions;
         private NativeArray<float3> velocities;
         private NativeArray<float3> targets;
         private NativeArray<Matrix4x4> matrices;
+        private NativeArray<int> states; // 0 = Rigid InLand, 1 = Boiding to BusWaitZone
 
         // Bug #2/#3 Fix: tempPositions stored as a field so we can manually dispose it
         // after the job completes, instead of relying on the removed [DeallocateOnJobCompletion].
@@ -85,10 +94,12 @@ namespace BusAway.CrowdSystem
             velocities = new NativeArray<float3>(maxAgents, Allocator.Persistent);
             targets = new NativeArray<float3>(maxAgents, Allocator.Persistent);
             matrices = new NativeArray<Matrix4x4>(maxAgents, Allocator.Persistent);
+            states = new NativeArray<int>(maxAgents, Allocator.Persistent);
 
             colors = new Vector4[maxAgents];
             batchMatrices = new Matrix4x4[1023];
             tempSubmeshMatrices = new Matrix4x4[1023];
+            agentPrefabs = new GameObject[maxAgents];
 
             colorBatchList = new List<Vector4>(1023);
             propertyBlock = new MaterialPropertyBlock();
@@ -130,6 +141,7 @@ namespace BusAway.CrowdSystem
             if (velocities.IsCreated) velocities.Dispose();
             if (targets.IsCreated) targets.Dispose();
             if (matrices.IsCreated) matrices.Dispose();
+            if (states.IsCreated) states.Dispose();
         }
 
         private void EnsureInitialized()
@@ -163,7 +175,24 @@ namespace BusAway.CrowdSystem
             positions[index] = position;
             velocities[index] = float3.zero;
             targets[index] = target;
+            states[index] = 0; // Rigidly set in Land initially
             colors[index] = color;
+
+            if (spawnMode == SpawnMode.Prefab && agentPrefab != null)
+            {
+                GameObject go = Instantiate(agentPrefab, position, Quaternion.identity, transform);
+                agentPrefabs[index] = go;
+
+                Renderer[] renderers = go.GetComponentsInChildren<Renderer>();
+                if (renderers.Length > 0)
+                {
+                    MaterialPropertyBlock mb = new MaterialPropertyBlock();
+                    mb.SetColor(BaseColorID, color);
+                    foreach (var r in renderers) {
+                        r.SetPropertyBlock(mb);
+                    }
+                }
+            }
 
             activeCount++;
             return index;
@@ -176,18 +205,32 @@ namespace BusAway.CrowdSystem
         {
             Debug.Assert(agentCount % 4 == 0, $"SpawnLand: agentCount must be multiple of 4, got {agentCount}");
 
-            float formationWidth = (totalLands - 1) * landSpacingX + (3 * agentSpacingX);
+            float formationWidth = (totalLands - 1) * landSpacingX;
             float offsetX = -formationWidth / 2f;
 
-            Vector3 basePos = this.transform.position + landBaseOffset + new Vector3(offsetX + landIndex * landSpacingX, 0, 0);
+            Vector3 landCenter = this.transform.position + landBaseOffset + new Vector3(offsetX + landIndex * landSpacingX, 0, 0);
+
+            // Đặt target đích xác ở đầu dải phân cách / giao lộ (để ko bị khoảng hở phía trên)
+            // Giao lộ mọc ra ở local Z + 0.4f. Tùy chỉnh 1 xíu để họ đứng ngay mép đường.
+            // Phải dùng tọa độ local so với landCenter bới vì targetPos = landCenter + new Vector3(..., frontZ)
+            float frontZ = 0.1f; 
 
             for (int i = 0; i < agentCount; i++)
             {
                 int row = i / 4;
                 int col = i % 4;
-                Vector3 pos = basePos + new Vector3(col * agentSpacingX, 0, -row * agentSpacingZ);
+                
+                // Agents clustered around landCenter.x
+                float localX = (col - 1.5f) * agentSpacingX;
+                
+                // Target is at the very front for this specific column
+                Vector3 targetPos = landCenter + new Vector3(localX, 0, frontZ);
 
-                SpawnCharacter(pos, pos, color);
+                // Spawn positions are arrayed backwards from the target
+                // frontZ là ở trên cùng, nên row càng lớn thì Z càng phải LÙI LẠI (trừ đi)
+                Vector3 pos = targetPos - new Vector3(0, 0, row * agentSpacingZ);
+
+                SpawnCharacter(pos, targetPos, color);
             }
 
             // Spawn roads under the land
@@ -214,21 +257,14 @@ namespace BusAway.CrowdSystem
                 GameObject roadGroup = new GameObject($"Roads_Land_{landIndex}");
                 roadGroup.transform.SetParent(this.transform);
 
-                int rows = agentCount / 4;
-                float depth = rows * agentSpacingZ; // how far local Z goes back
+                // Use Fixed Road Pieces defined in inspector instead of scaling dynamically
+                int roadPieces = landFixedRoadPieces;
 
-                // Add a bit of padding and calculate number of pieces
-                int roadPieces = Mathf.CeilToInt((depth + 0.5f) / tSize);
-                if (roadPieces < 1) roadPieces = 1;
-
-                // Center of the 4 columns
-                float cx = basePos.x + 1.5f * agentSpacingX;
                 for (int p = 0; p < roadPieces; p++)
                 {
                     GameObject rw = Instantiate(roadPrefab, roadGroup.transform);
                     // Place it progressively downwards along negative Z
-                    // Adjust by agentSpacingZ / 2 f to align nicely with the front of the crowd
-                    rw.transform.position = new Vector3(cx, 0, basePos.z + agentSpacingZ / 2f - p * tSize - tSize / 2f);
+                    rw.transform.position = new Vector3(landCenter.x, 0, landCenter.z + 0.4f - p * tSize - tSize / 2f);
                 }
             }
 
@@ -239,6 +275,44 @@ namespace BusAway.CrowdSystem
         /// Gets the current active agent count. Used for testing.
         /// </summary>
         public int GetActiveCountForTesting() => activeCount;
+
+        /// <summary>
+        /// Moves a number of agents of a specific color to the BusWaitZone target using Boids (state 1).
+        /// Shifts the remaining agents of this color in their land forward simultaneously (rigidly, state 0).
+        /// </summary>
+        public void DispatchGroupToWaitZone(Color groupColor, int count, Vector3 waitZonePos, int shiftRows)
+        {
+            EnsureInitialized();
+            crowdJobHandle.Complete();
+
+            System.Collections.Generic.List<int> matchingIndices = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < activeCount; i++)
+            {
+                if (states[i] == 0 && Vector4.Distance(colors[i], groupColor) < 0.05f)
+                {
+                    matchingIndices.Add(i);
+                }
+            }
+
+            // Mặc định front là Z lớn nhất (ở trên cùng), sort giảm dần
+            matchingIndices.Sort((a, b) => positions[b].z.CompareTo(positions[a].z));
+
+            for (int i = 0; i < matchingIndices.Count; i++)
+            {
+                int agentIdx = matchingIndices[i];
+                if (i < count)
+                {
+                    // Phát lệnh đi ra BusWaitZone, bật chế độ Boids
+                    states[agentIdx] = 1; 
+                    targets[agentIdx] = waitZonePos;
+                }
+                else
+                {
+                    // Lực lượng còn lại trong Land nhích dần lên (đồng loạt tịnh tiến) theo rigid movement
+                    targets[agentIdx] = targets[agentIdx] + new float3(0, 0, shiftRows * agentSpacingZ);
+                }
+            }
+        }
 
         /// <summary>
         /// Removes a character by index, swapping with the last agent to keep arrays packed.
@@ -252,13 +326,26 @@ namespace BusAway.CrowdSystem
 
             int lastIndex = activeCount - 1;
 
+            if (spawnMode == SpawnMode.Prefab && agentPrefabs[index] != null)
+            {
+                Destroy(agentPrefabs[index]);
+                agentPrefabs[index] = null;
+            }
+
             // Swap with last active instance if it's not the same
             if (index != lastIndex)
             {
                 positions[index] = positions[lastIndex];
                 velocities[index] = velocities[lastIndex];
                 targets[index] = targets[lastIndex];
+                states[index] = states[lastIndex];
                 colors[index] = colors[lastIndex];
+                
+                if (spawnMode == SpawnMode.Prefab)
+                {
+                    agentPrefabs[index] = agentPrefabs[lastIndex];
+                    agentPrefabs[lastIndex] = null;
+                }
             }
 
             activeCount--;
@@ -275,6 +362,80 @@ namespace BusAway.CrowdSystem
             {
                 targets[index] = newTarget;
             }
+        }
+
+        /// <summary>
+        /// Finds the agent closest to the given world point (e.g. from a raycast).
+        /// </summary>
+        public int GetClosestAgent(Vector3 worldPos, float maxDistance = 2.0f)
+        {
+            EnsureInitialized();
+            crowdJobHandle.Complete(); // Make sure positions are valid
+
+            int closestIndex = -1;
+            float minDistSqr = maxDistance * maxDistance;
+
+            for (int i = 0; i < activeCount; i++)
+            {
+                float distSqr = math.distancesq(positions[i], worldPos);
+                if (distSqr < minDistSqr)
+                {
+                    minDistSqr = distSqr;
+                    closestIndex = i;
+                }
+            }
+            return closestIndex;
+        }
+
+        /// <summary>
+        /// Uses Breadth First Search (BFS) to find all connected agents of the same color.
+        /// </summary>
+        public List<int> GetConnectedRegion(int startIndex)
+        {
+            List<int> result = new List<int>();
+            if (startIndex < 0 || startIndex >= activeCount) return result;
+
+            EnsureInitialized();
+            crowdJobHandle.Complete();
+
+            Vector4 targetColor = colors[startIndex];
+            
+            // Adjacency threshold (diagonal included: sqrt(x^2 + z^2) ~ 1.414 * spacing)
+            float thresholdDistance = Mathf.Max(agentSpacingX, agentSpacingZ) * 1.5f;
+            float thresholdSqr = thresholdDistance * thresholdDistance;
+
+            bool[] visited = new bool[activeCount];
+            Queue<int> queue = new Queue<int>();
+
+            queue.Enqueue(startIndex);
+            visited[startIndex] = true;
+
+            while (queue.Count > 0)
+            {
+                int curr = queue.Dequeue();
+                result.Add(curr);
+
+                float3 currPos = positions[curr];
+
+                // Check all other agents
+                for (int i = 0; i < activeCount; i++)
+                {
+                    if (visited[i]) continue;
+                    
+                    // Check if SAME Color
+                    if (colors[i] == targetColor)
+                    {
+                        // Check if CONNECTED (by distance)
+                        if (math.distancesq(currPos, positions[i]) <= thresholdSqr)
+                        {
+                            visited[i] = true;
+                            queue.Enqueue(i);
+                        }
+                    }
+                }
+            }
+
+            return result;
         }
 
         private void Update()
@@ -309,7 +470,8 @@ namespace BusAway.CrowdSystem
                 targets = targets,
                 allPositions = tempPositions, // Read-only snapshot; disposed manually next frame
                 positions = positions,
-                velocities = velocities
+                velocities = velocities,
+                states = states
             };
 
             JobHandle moveHandle = movementJob.Schedule(activeCount, 64); // Batch size 64
@@ -327,14 +489,34 @@ namespace BusAway.CrowdSystem
 
         private void LateUpdate()
         {
-            // Only draw if we have agents + mesh + mat
-            if (activeCount == 0 || subMeshes.Count == 0) return;
+            if (activeCount == 0) return;
 
             // Wait for matrix calculation to be done before rendering
             crowdJobHandle.Complete();
 
-            // Render in batches of 1023 (DrawMeshInstanced hard limit)
-            RenderBatches();
+            if (spawnMode == SpawnMode.Prefab)
+            {
+                for (int i = 0; i < activeCount; i++)
+                {
+                    if (agentPrefabs[i] != null)
+                    {
+                        agentPrefabs[i].transform.position = positions[i];
+                        float3 vel = velocities[i];
+                        if (math.lengthsq(vel) > 0.001f)
+                        {
+                            agentPrefabs[i].transform.rotation = Quaternion.LookRotation(vel, Vector3.up);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Only draw if we have agents + mesh + mat
+                if (subMeshes.Count == 0) return;
+
+                // Render in batches of 1023 (DrawMeshInstanced hard limit)
+                RenderBatches();
+            }
         }
 
         private void RenderBatches()
@@ -440,6 +622,14 @@ namespace BusAway.CrowdSystem
         public void DebugClearAll()
         {
             crowdJobHandle.Complete();
+            if (spawnMode == SpawnMode.Prefab)
+            {
+                for (int i = 0; i < activeCount; i++)
+                {
+                    if (agentPrefabs[i] != null) Destroy(agentPrefabs[i]);
+                    agentPrefabs[i] = null;
+                }
+            }
             activeCount = 0;
         }
         #endregion
