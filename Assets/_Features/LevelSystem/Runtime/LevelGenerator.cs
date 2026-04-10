@@ -23,9 +23,21 @@ namespace BusAway.Gameplay
         public GameObject cornerNW;
         public GameObject cornerSW;
 
-        [Header("Half T-Junctions")]
-        public GameObject halfTLeft;
-        public GameObject halfTRight;
+        [Header("Bus Stops (Half T-Junctions)")]
+        public GameObject halfT_N_Left;
+        public GameObject halfT_N_Right;
+        public GameObject halfT_E_Left;
+        public GameObject halfT_E_Right;
+        public GameObject halfT_S_Left;
+        public GameObject halfT_S_Right;
+        public GameObject halfT_W_Left;
+        public GameObject halfT_W_Right;
+
+        [Header("Bus Stop Props (Canopy/Sign)")]
+        public GameObject busStopPropN;
+        public GameObject busStopPropE;
+        public GameObject busStopPropS;
+        public GameObject busStopPropW;
 
         [Header("Cross, Generic")]
         public GameObject crossRoad;
@@ -90,6 +102,7 @@ namespace BusAway.Gameplay
                     if (cell == RoadCellType.Empty) continue;
 
                     GameObject prefabTemplate = null;
+                    GameObject busStopPropTemplate = null;
                     float rotYFallback = 0f;
                     string shapeTypeStr = "Straight";
 
@@ -102,14 +115,14 @@ namespace BusAway.Gameplay
                         case RoadCellType.Corner_NE: prefabTemplate = cornerNE; rotYFallback = camFlip - 90f;  shapeTypeStr = "Corner"; break;
                         case RoadCellType.Corner_NW: prefabTemplate = cornerNW; rotYFallback = camFlip + 180f; shapeTypeStr = "Corner"; break;
                         case RoadCellType.Corner_SW: prefabTemplate = cornerSW; rotYFallback = camFlip + 90f;  shapeTypeStr = "Corner"; break;
-                        case RoadCellType.HalfT_BusStop_N_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_N_Right: prefabTemplate = halfTRight; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_E_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_E_Right: prefabTemplate = halfTRight; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_S_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip + 180f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_S_Right: prefabTemplate = halfTRight; rotYFallback = camFlip + 180f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_W_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip - 90f; shapeTypeStr = "HalfT_BusStop"; break;
-                        case RoadCellType.HalfT_BusStop_W_Right: prefabTemplate = halfTRight; rotYFallback = camFlip - 90f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_N_Left: prefabTemplate = halfT_N_Left; busStopPropTemplate = busStopPropN; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_N_Right: prefabTemplate = halfT_N_Right; busStopPropTemplate = busStopPropN; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_E_Left: prefabTemplate = halfT_E_Left; busStopPropTemplate = busStopPropE; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_E_Right: prefabTemplate = halfT_E_Right; busStopPropTemplate = busStopPropE; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_S_Left: prefabTemplate = halfT_S_Left; busStopPropTemplate = busStopPropS; rotYFallback = camFlip + 180f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_S_Right: prefabTemplate = halfT_S_Right; busStopPropTemplate = busStopPropS; rotYFallback = camFlip + 180f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_W_Left: prefabTemplate = halfT_W_Left; busStopPropTemplate = busStopPropW; rotYFallback = camFlip - 90f; shapeTypeStr = "HalfT_BusStop"; break;
+                        case RoadCellType.HalfT_BusStop_W_Right: prefabTemplate = halfT_W_Right; busStopPropTemplate = busStopPropW; rotYFallback = camFlip - 90f; shapeTypeStr = "HalfT_BusStop"; break;
 
                         case RoadCellType.Cross: prefabTemplate = crossRoad; rotYFallback = camFlip; shapeTypeStr = "Cross"; break;
 
@@ -136,6 +149,21 @@ namespace BusAway.Gameplay
                         tileObj.transform.position = pos;
                         // NO ROTATION OVERRIDE: Prefab retains its own saved rotation
                         tileObj.name = $"Tile_{x}_{y}_{shapeTypeStr}";
+
+                        // Nếu tile này cần spawn thêm canopy (Bus Stop prop) và có gán prefab
+                        if (busStopPropTemplate != null)
+                        {
+                            GameObject propObj;
+#if UNITY_EDITOR
+                            if (!Application.isPlaying) propObj = (GameObject)PrefabUtility.InstantiatePrefab(busStopPropTemplate, tileObj.transform);
+                            else propObj = Instantiate(busStopPropTemplate, tileObj.transform);
+#else
+                            propObj = Instantiate(busStopPropTemplate, tileObj.transform);
+#endif
+                            propObj.transform.localPosition = Vector3.zero;
+                            // Để yên rotation theo prefab của prop
+                            propObj.name = "BusStop_Prop";
+                        }
                     }
                     else
                     {
