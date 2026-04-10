@@ -143,9 +143,15 @@ namespace BusMovement
                 Vector3 direction = (targetFlat - currentPos).normalized;
                 if (direction != Vector3.zero)
                 {
+                    Quaternion startRot = transform.rotation;
                     Quaternion targetRot = Quaternion.LookRotation(direction);
-                    float rotDuration = Mathf.Min(duration, 0.15f); // Fast face-forward
-                    moveSequence.Group(PrimeTween.Tween.Rotation(transform, targetRot, rotDuration, PrimeTween.Ease.InOutQuad));
+                    float rotDuration = Mathf.Min(duration, duration * 0.75f); // Soft curve cornering
+                    
+                    moveSequence.Group(PrimeTween.Tween.Custom(0f, 1f, rotDuration, onValueChange: t => 
+                    {
+                        if (this != null && transform != null)
+                            transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
+                    }, ease: PrimeTween.Ease.InOutQuad));
                 }
 
                 currentPos = targetFlat;

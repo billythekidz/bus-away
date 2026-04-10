@@ -22,20 +22,15 @@ MonoBehaviour:
   passengerQueueOrder: []
   busesPerStop: 3
   agentsPerBus: 32
-  minLandCount: 2
-  maxLandCount: 4
-  minAgentsPerLand: 4
-  maxAgentsPerLand: 24
+  landCount: 3
   landColorPalette:
   - {r: 0, g: 0.95960426, b: 1, a: 1}
   - {r: 0, g: 1, b: 0.21875882, a: 1}
   - {r: 1, g: 0.8489028, b: 0, a: 1}
   resolvedLands:
-  - agentCount: 20
+  - agentCount: 40
     color: {r: 1, g: 0.8489028, b: 0, a: 1}
-  - agentCount: 24
-    color: {r: 0, g: 0.95960426, b: 1, a: 1}
-  - agentCount: 24
+  - agentCount: 40
     color: {r: 0, g: 1, b: 0.21875882, a: 1}
-  - agentCount: 12
-    color: {r: 1, g: 1, b: 1, a: 1}
+  - agentCount: 40
+    color: {r: 0, g: 0.95960426, b: 1, a: 1}
