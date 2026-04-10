@@ -81,6 +81,16 @@ All AI-generated code was reviewed, tested, and integrated manually by the devel
 While AI agents were heavily utilized for architecture and coding, **the 3D tile models (using ProBuilder) and road grid prefabs had to be designed and constructed manually, one by one.** 
 Attempting to ask AI agents to procedurally generate or parameterize specific visual 3D structures (like the `HalfT` bus stops or fully-featured `DeadEnd` tiles with proper edge loops and UVs) proved to be extremely inefficient. It resulted in numerous shape errors, misaligned concave/convex curves, and time-consuming back-and-forth debugging. Building these assets manually guarantees geometric precision and high visual polish.
 
+### 🔄 Example: Human-AI Collaboration Workflow
+
+To illustrate how we bridged the gap between AI logic and manual 3D asset creation, here is the exact workflow used to finalize the grid tiles:
+
+1. **Initial Code Generation:** The AI generated the C# architecture (`LevelDesignData.cs`, `LevelGenerator.cs`) and attempted procedural mesh generation via ProBuilder for the base grid tiles.
+2. **Visual Review & Manual Override:** The procedural generation failed to capture the exact aesthetic nuances (e.g., generating concave inner corners for Bus Bay tiles instead of convex outer curves). The human developer took the generated base logic and manually sculpted the final `HalfT` (Bus Stop) and `DeadEnd` prefabs by hand.
+3. **Logic Sync & Image QA:** The developer arranged the hand-crafted 3D tiles in Unity and provided screenshots to the AI.
+4. **AI Verification:** The AI analyzed the geometry from the images, cross-referenced them with the C# Enums (`N, E, S, W`), and correctly spotted a visual mismatch (the West and East DeadEnd tiles were physically swapped in the scene).
+5. **Correction & Final Integration:** The human developer corrected the orientation based on the AI's feedback, ensuring the prefabs perfectly matched the code logic. The AI then automatically committed and pushed the final validated assets to version control.
+
 ---
 
 ## 🛠️ Technical Details

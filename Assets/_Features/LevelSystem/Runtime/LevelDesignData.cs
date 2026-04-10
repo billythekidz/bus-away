@@ -26,10 +26,10 @@ namespace BusAway.Level
         
         Cross = 19,             // Ngã tư đầy đủ: 4 nhánh thông nhau (Bắc, Nam, Đông, Tây)
 
-        DeadEnd_N = 20,         // Đường cụt hướng Bắc: chỉ có 1 lối vào từ phía Nam, đầu kia bịt kín
-        DeadEnd_E = 21,         // Đường cụt hướng Đông: chỉ có 1 lối vào từ phía Tây
-        DeadEnd_S = 22,         // Đường cụt hướng Nam: chỉ có 1 lối vào từ phía Bắc
-        DeadEnd_W = 23,         // Đường cụt hướng Tây: chỉ có 1 lối vào từ phía Đông
+        DeadEnd_N = 20,         // Tuyến đường đâm về hướng Bắc. Phần ngõ cụt (bị bịt) nằm ở viền Bắc, cổng kết nối mở ra hướng Nam.
+        DeadEnd_E = 21,         // Tuyến đường đâm về hướng Đông. Phần ngõ cụt (bị bịt) nằm ở viền Đông, cổng kết nối mở ra hướng Tây.
+        DeadEnd_S = 22,         // Tuyến đường đâm về hướng Nam. Phần ngõ cụt (bị bịt) nằm ở viền Nam, cổng kết nối mở ra hướng Bắc.
+        DeadEnd_W = 23,         // Tuyến đường đâm về hướng Tây. Phần ngõ cụt (bị bịt) nằm ở viền Tây, cổng kết nối mở ra hướng Đông.
 
         // Trạm xe buýt / Gara đỗ xe: mỗi trạm chiếm 2 ô liên tiếp (Phần 1 + Phần 2).
         // Index đặt theo cặp liền kề theo từng hướng xoay để dễ mapping và lập trình.
