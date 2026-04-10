@@ -34,9 +34,13 @@ namespace BusAway.Gameplay
         public GameObject halfT_W_Right;
 
         [Header("Bus Stop Props (Canopy/Sign)")]
+        [Tooltip("Place this prefab on North T-junctions. Parking slot is at the North edge; the entrance/door faces South toward the street.")]
         public GameObject busStopPropN;
+        [Tooltip("Place this prefab on East T-junctions. Parking slot is at the East edge; the entrance/door faces West toward the street.")]
         public GameObject busStopPropE;
+        [Tooltip("Place this prefab on South T-junctions. Parking slot is at the South edge; the entrance/door faces North toward the street.")]
         public GameObject busStopPropS;
+        [Tooltip("Place this prefab on West T-junctions. Parking slot is at the West edge; the entrance/door faces East toward the street.")]
         public GameObject busStopPropW;
 
         [Header("Cross, Generic")]
