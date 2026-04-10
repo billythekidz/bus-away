@@ -100,16 +100,25 @@ namespace BusAway.Gameplay
                         case RoadCellType.DeadEnd_S: prefabTemplate = tileDeadEndPrefab; rotY = 180f; shapeTypeStr = "DeadEnd"; break;
                         case RoadCellType.DeadEnd_W: prefabTemplate = tileDeadEndPrefab; rotY = -90f; shapeTypeStr = "DeadEnd"; break;
 
-                        case RoadCellType.BusStop:
+                        case RoadCellType.BusStop_1_N:
+                        case RoadCellType.BusStop_2_N:
                             prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
-                            bool e = HasRoad(x + 1, y);
-                            bool w = HasRoad(x - 1, y);
-                            rotY = (e || w) ? 90f : 0f;
-                            shapeTypeStr = "BusStop";
-                            break;
+                            rotY = 0f; shapeTypeStr = "BusStop"; break;
 
-                        case RoadCellType.Crosswalk_NS: prefabTemplate = tileCrosswalkPrefab; rotY = 0f; shapeTypeStr = "Crosswalk"; break;
-                        case RoadCellType.Crosswalk_EW: prefabTemplate = tileCrosswalkPrefab; rotY = 90f; shapeTypeStr = "Crosswalk"; break;
+                        case RoadCellType.BusStop_1_E:
+                        case RoadCellType.BusStop_2_E:
+                            prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
+                            rotY = 90f; shapeTypeStr = "BusStop"; break;
+
+                        case RoadCellType.BusStop_1_S:
+                        case RoadCellType.BusStop_2_S:
+                            prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
+                            rotY = 180f; shapeTypeStr = "BusStop"; break;
+
+                        case RoadCellType.BusStop_1_W:
+                        case RoadCellType.BusStop_2_W:
+                            prefabTemplate = tileBusStopPrefab != null ? tileBusStopPrefab : tileStraightPrefab;
+                            rotY = -90f; shapeTypeStr = "BusStop"; break;
 
                         case RoadCellType.GenericRoad:
                             prefabTemplate = tileStraightPrefab; rotY = 0f; shapeTypeStr = "Straight"; break;

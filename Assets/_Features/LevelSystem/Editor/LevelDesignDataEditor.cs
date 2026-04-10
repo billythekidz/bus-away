@@ -48,15 +48,12 @@ namespace BusAway.LevelEditor
                         string label = ".";
                         Color btnColor = Color.white;
 
-                        if (cell == RoadCellType.BusStop)
+                        bool isBusStop = cell >= RoadCellType.BusStop_1_N && cell <= RoadCellType.BusStop_2_W;
+
+                        if (isBusStop)
                         {
                             label = "B";
                             btnColor = new Color(0.2f, 0.6f, 1.0f);
-                        }
-                        else if (cell == RoadCellType.GenericCrosswalk || cell == RoadCellType.Crosswalk_NS || cell == RoadCellType.Crosswalk_EW)
-                        {
-                            label = "C";
-                            btnColor = new Color(0.8f, 0.8f, 0.0f);
                         }
                         else if (cell != RoadCellType.Empty)
                         {
@@ -67,12 +64,11 @@ namespace BusAway.LevelEditor
                         GUI.backgroundColor = btnColor;
                         if (GUILayout.Button(label, GUILayout.Width(25), GUILayout.Height(25)))
                         {
+                            bool isBusStop = cell >= RoadCellType.BusStop_1_N && cell <= RoadCellType.BusStop_2_W;
                             if (cell == RoadCellType.Empty)
                                 data.grid[index] = RoadCellType.GenericRoad;
-                            else if (cell != RoadCellType.BusStop && cell != RoadCellType.GenericCrosswalk && cell != RoadCellType.Crosswalk_NS && cell != RoadCellType.Crosswalk_EW)
-                                data.grid[index] = RoadCellType.BusStop;
-                            else if (cell == RoadCellType.BusStop)
-                                data.grid[index] = RoadCellType.GenericCrosswalk;
+                            else if (!isBusStop)
+                                data.grid[index] = RoadCellType.BusStop_1_N;
                             else
                                 data.grid[index] = RoadCellType.Empty;
 
@@ -124,9 +120,8 @@ namespace BusAway.LevelEditor
                     int index = y * data.gridWidth + x;
                     RoadCellType current = data.grid[index];
 
-                    if (current == RoadCellType.Empty || current == RoadCellType.BusStop) continue;
-
-                    bool isCrosswalk = (current == RoadCellType.GenericCrosswalk || current == RoadCellType.Crosswalk_NS || current == RoadCellType.Crosswalk_EW);
+                    bool isBusStop = current >= RoadCellType.BusStop_1_N && current <= RoadCellType.BusStop_2_W;
+                    if (current == RoadCellType.Empty || isBusStop) continue;
 
                     bool n = HasRoad(x, y + 1);
                     bool e = HasRoad(x + 1, y);
@@ -141,18 +136,18 @@ namespace BusAway.LevelEditor
 
                     int mask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
 
-                    RoadCellType newType = isCrosswalk ? RoadCellType.GenericCrosswalk : RoadCellType.GenericRoad;
+                    RoadCellType newType = RoadCellType.GenericRoad;
 
                     switch (mask)
                     {
-                        case 0: break; // Unconnected
+                        case 0: break;
                         case 1: newType = RoadCellType.DeadEnd_N; break;
                         case 2: newType = RoadCellType.DeadEnd_E; break;
                         case 4: newType = RoadCellType.DeadEnd_S; break;
                         case 8: newType = RoadCellType.DeadEnd_W; break;
-                        
-                        case 5: newType = isCrosswalk ? RoadCellType.Crosswalk_NS : RoadCellType.Straight_NS; break;
-                        case 10: newType = isCrosswalk ? RoadCellType.Crosswalk_EW : RoadCellType.Straight_EW; break;
+
+                        case 5:  newType = RoadCellType.Straight_NS; break;
+                        case 10: newType = RoadCellType.Straight_EW; break;
                         
                         case 3: newType = ne ? RoadCellType.InnerCorner_NE : RoadCellType.Corner_NE; break;
                         case 6: newType = se ? RoadCellType.InnerCorner_SE : RoadCellType.Corner_SE; break;
@@ -196,33 +191,27 @@ namespace BusAway.LevelEditor
             RectInt rootArea = new RectInt(1, 1, data.gridWidth - 2, data.gridHeight - 2);
             RecursiveDivide(data, rootArea, minSize, true);
 
-            // Task 3: Scatter POIs
-            int attempts = 100;
+            // Scatter Bus Stops on straight road segments
             int numBusStops = 1 + complexity;
-            int numCrosswalks = 1 + complexity;
-            
-            while ((numBusStops > 0 || numCrosswalks > 0) && attempts-- > 0)
+            int attempts = 100;
+
+            while (numBusStops > 0 && attempts-- > 0)
             {
                 int x = Random.Range(1, data.gridWidth - 1);
                 int y = Random.Range(1, data.gridHeight - 1);
                 int idx = y * data.gridWidth + x;
-                
+
                 if (data.grid[idx] == RoadCellType.GenericRoad)
                 {
                     bool n = data.GetCell(x, y + 1) != RoadCellType.Empty;
                     bool s = data.GetCell(x, y - 1) != RoadCellType.Empty;
                     bool e = data.GetCell(x + 1, y) != RoadCellType.Empty;
                     bool w = data.GetCell(x - 1, y) != RoadCellType.Empty;
-                    
+
                     if ((n && s && !e && !w) || (e && w && !n && !s))
                     {
-                        if (numBusStops > 0) {
-                            data.grid[idx] = RoadCellType.BusStop;
-                            numBusStops--;
-                        } else if (numCrosswalks > 0) {
-                            data.grid[idx] = RoadCellType.GenericCrosswalk;
-                            numCrosswalks--;
-                        }
+                        data.grid[idx] = RoadCellType.BusStop_1_N;
+                        numBusStops--;
                     }
                 }
             }

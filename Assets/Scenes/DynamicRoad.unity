@@ -1797,10 +1797,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1426781780}
+    - target: {fileID: 938370997084816468, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 320177277}
+    - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1865068075848391758, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Name
       value: Tile_3_4_BusStop
@@ -1853,10 +1861,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1076981687}
+    - target: {fileID: 3845786962566286095, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 562314821}
+    - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 4299907196627204091, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -1869,10 +1885,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 626100211}
+    - target: {fileID: 5215316577912749642, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1787015445}
+    - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 8044884989263646910, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -4215,10 +4239,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 926313712}
+    - target: {fileID: 938370997084816468, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 863552168}
+    - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1865068075848391758, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Name
       value: Tile_4_4_BusStop
@@ -4271,10 +4303,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 698763341}
+    - target: {fileID: 3845786962566286095, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1506886856}
+    - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 4299907196627204091, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -4287,10 +4327,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 626677076}
+    - target: {fileID: 5215316577912749642, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1110346655}
+    - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 8044884989263646910, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -4828,10 +4876,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1712277313}
+    - target: {fileID: 938370997084816468, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 886169899}
+    - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1865068075848391758, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Name
       value: Tile_1_3_BusStop
@@ -4884,10 +4940,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1226192873}
+    - target: {fileID: 3845786962566286095, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 633208671}
+    - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 4299907196627204091, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -4900,10 +4964,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1988310181}
+    - target: {fileID: 5215316577912749642, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1567374718}
+    - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 8044884989263646910, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -6668,10 +6740,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 139516487}
+    - target: {fileID: 938370997084816468, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 905604886}
+    - target: {fileID: 1425190668797402650, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1865068075848391758, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Name
       value: Tile_3_1_BusStop
@@ -6724,10 +6804,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1788199372}
+    - target: {fileID: 3845786962566286095, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 720086376}
+    - target: {fileID: 3944425038249202849, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 4299907196627204091, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -6740,10 +6828,18 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 344562671}
+    - target: {fileID: 5215316577912749642, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1857329752}
+    - target: {fileID: 6818246888918326280, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
+      propertyPath: m_VersionIndex
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 8044884989263646910, guid: 1c72ed40cba81794f98850071c7f586f, type: 3}
       propertyPath: m_Mesh
       value: 
