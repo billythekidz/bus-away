@@ -159,14 +159,15 @@ namespace BusAway.Gameplay
                         {
                             GameObject propObj;
 #if UNITY_EDITOR
-                            if (!Application.isPlaying) propObj = (GameObject)PrefabUtility.InstantiatePrefab(busStopPropTemplate, tileObj.transform);
-                            else propObj = Instantiate(busStopPropTemplate, tileObj.transform);
+                            if (!Application.isPlaying) propObj = (GameObject)PrefabUtility.InstantiatePrefab(busStopPropTemplate, roadRoot.transform);
+                            else propObj = Instantiate(busStopPropTemplate, roadRoot.transform);
 #else
-                            propObj = Instantiate(busStopPropTemplate, tileObj.transform);
+                            propObj = Instantiate(busStopPropTemplate, roadRoot.transform);
 #endif
-                            propObj.transform.localPosition = Vector3.zero;
-                            // Để yên rotation theo prefab của prop
-                            propObj.name = "BusStop_Prop";
+                            propObj.transform.position = pos;
+                            propObj.transform.rotation = busStopPropTemplate.transform.rotation;
+                            // Để yên rotation nguyên bản của prefab
+                            propObj.name = $"BusStop_Prop_{x}_{y}";
                         }
                     }
                     else
