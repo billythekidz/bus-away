@@ -5,8 +5,8 @@ Dựa trên hình ảnh `grid_tiles.jpg`, lưới (grid) thực tế có kích t
 ```csharp
 int[,] mapGrid = new int[5, 6] {
     // Cột 0   Cột 1   Cột 2   Cột 3   Cột 4   Cột 5
-    {   0,     11,     12,     11,     12,      0   }, // Hàng 0 (Khu Gara ngang: Xe Tím C1-C2, Xe Xanh C3-C4, dùng HalfT_BusStop_N_Left/Right)
-    {   5,      2,      2,      2,      2,      6   }, // Hàng 1 (Đường ngang trên, và góc cua trên)
+    {   0,     20,     20,     20,     20,      0   }, // Hàng 0 (Khu Gara ngang: Xe Tím C1-C2, Xe Xanh C3-C4, dùng HalfT_BusStop_N_Left/Right)
+    {   5,      11,      12,      11,      12,      6   }, // Hàng 1 (Đường ngang trên, và góc cua trên)
     {   6,      0,      0,      0,     13,      1   }, // Hàng 2 (C0: Nửa trên của góc cua trái (6), C4: Nhà chờ dọc 1 (HalfT_BusStop_E_Left))
     {   4,      0,      0,      0,     14,      1   }, // Hàng 3 (C0: Nửa dưới của góc cua trái (4), C4: Nhà chờ dọc 2 (HalfT_BusStop_E_Right))
     {   3,      2,      2,      2,      2,      4   }  // Hàng 4 (Đường ngang dưới, xe Vàng đỗ ở góc C5)

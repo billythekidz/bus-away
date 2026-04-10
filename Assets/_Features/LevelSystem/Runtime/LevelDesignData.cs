@@ -23,7 +23,8 @@ namespace BusAway.Level
         HalfT_BusStop_S_Right = 16,     // Nửa phải của trạm Bus hướng Nam
         HalfT_BusStop_W_Left = 17,      // Nửa trái của trạm Bus hướng Tây
         HalfT_BusStop_W_Right = 18,     // Nửa phải của trạm Bus hướng Tây
-        
+
+
         Cross = 19,             // Ngã tư đầy đủ: 4 nhánh thông nhau (Bắc, Nam, Đông, Tây)
 
         DeadEnd_N = 20,         // Tuyến đường đâm về hướng Bắc. Phần ngõ cụt (bị bịt) nằm ở viền Bắc, cổng kết nối mở ra hướng Nam.
@@ -82,12 +83,33 @@ namespace BusAway.Level
         [Tooltip("Number of bus stops to generate in the map")]
         public int busStopLength = 2;
 
-        [Header("Buses")]
+        // --- Auto-managed by Game Manager, no manual editing needed ---
+        [HideInInspector]
         public List<BusSpawnData> buses = new List<BusSpawnData>();
 
-        [Header("Passenger Queue")]
-        [Tooltip("Ordered list of passenger colors to spawn during gameplay")]
+        [HideInInspector]
         public List<Color> passengerQueueOrder = new List<Color>();
+
+        // ── Bus Dispatch Config ──────────────────────────────────────────────────
+        [Header("Bus Dispatch Config")]
+
+        /// <summary>
+        /// How many buses are assigned to each bus stop on the map.
+        /// All bus stops share the same number of buses.
+        /// Buses loop the road ring and stop once they've collected enough passengers.
+        /// </summary>
+        [Tooltip("Number of buses assigned per bus stop. All stops share this value. Buses keep looping until they collect enough same-color passengers, then park at the bus stop and disappear.")]
+        public int busesPerStop = 1;
+
+        /// <summary>
+        /// Minimum number of same-color passengers a bus must collect before it
+        /// stops looping the road ring and drives into the bus stop.
+        /// This value also determines the total agent pool per color:
+        ///   resolvedLands agentCount = (number of buses of that color) × agentsPerBus
+        /// Default: 32.
+        /// </summary>
+        [Tooltip("Number of same-color passengers a bus must board before it exits the loop and parks at the bus stop. Also drives crowd land sizing: agentCount per color = busCount × agentsPerBus.")]
+        public int agentsPerBus = 32;
 
         [Header("Crowd Lands")]
         [HideInInspector]
