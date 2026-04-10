@@ -54,7 +54,7 @@ namespace BusAway.Gameplay
         public GameObject deadEndW;
 
 
-        
+
         [Header("Buses")]
         public GameObject busPrefab;
 
@@ -79,7 +79,7 @@ namespace BusAway.Gameplay
             ground.transform.SetParent(this.transform);
             ground.transform.position = new Vector3(0, -0.1f, 0);
             ground.transform.localScale = new Vector3(10, 1, 10);
-            
+
             Material groundMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             groundMat.color = new Color(0.6f, 0.75f, 0.6f);
             ground.GetComponent<Renderer>().material = groundMat;
@@ -91,7 +91,7 @@ namespace BusAway.Gameplay
             float tSize = activeLevelData.tileSize;
             // Camera is rotated 180° on Y-axis, so we flip both X and Z
             // so that grid[x,y] visually maps: x+ = screen-right, y+ = screen-up
-            float offsetX = (activeLevelData.gridWidth  * tSize) / 2f - (tSize / 2f);
+            float offsetX = (activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
             float offsetZ = (activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
             const float camFlip = 180f; // Add to all rotY values to align with flipped camera
 
@@ -112,13 +112,13 @@ namespace BusAway.Gameplay
 
                     switch (cell)
                     {
-                        case RoadCellType.Straight_NS: prefabTemplate = straightNS; rotYFallback = camFlip + 0f;   shapeTypeStr = "Straight"; break;
-                        case RoadCellType.Straight_EW: prefabTemplate = straightEW; rotYFallback = camFlip + 90f;  shapeTypeStr = "Straight"; break;
+                        case RoadCellType.Straight_NS: prefabTemplate = straightNS; rotYFallback = camFlip + 0f; shapeTypeStr = "Straight"; break;
+                        case RoadCellType.Straight_EW: prefabTemplate = straightEW; rotYFallback = camFlip + 90f; shapeTypeStr = "Straight"; break;
 
-                        case RoadCellType.Corner_SE: prefabTemplate = cornerSE; rotYFallback = camFlip + 0f;   shapeTypeStr = "Corner"; break;
-                        case RoadCellType.Corner_NE: prefabTemplate = cornerNE; rotYFallback = camFlip - 90f;  shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_SE: prefabTemplate = cornerSE; rotYFallback = camFlip + 0f; shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_NE: prefabTemplate = cornerNE; rotYFallback = camFlip - 90f; shapeTypeStr = "Corner"; break;
                         case RoadCellType.Corner_NW: prefabTemplate = cornerNW; rotYFallback = camFlip + 180f; shapeTypeStr = "Corner"; break;
-                        case RoadCellType.Corner_SW: prefabTemplate = cornerSW; rotYFallback = camFlip + 90f;  shapeTypeStr = "Corner"; break;
+                        case RoadCellType.Corner_SW: prefabTemplate = cornerSW; rotYFallback = camFlip + 90f; shapeTypeStr = "Corner"; break;
                         case RoadCellType.HalfT_BusStop_N_Left: prefabTemplate = halfT_N_Left; busStopPropTemplate = busStopPropN; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT_BusStop"; break;
                         case RoadCellType.HalfT_BusStop_N_Right: prefabTemplate = halfT_N_Right; busStopPropTemplate = busStopPropN; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT_BusStop"; break;
                         case RoadCellType.HalfT_BusStop_E_Left: prefabTemplate = halfT_E_Left; busStopPropTemplate = busStopPropE; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT_BusStop"; break;
@@ -130,10 +130,10 @@ namespace BusAway.Gameplay
 
                         case RoadCellType.Cross: prefabTemplate = crossRoad; rotYFallback = camFlip; shapeTypeStr = "Cross"; break;
 
-                        case RoadCellType.DeadEnd_N: prefabTemplate = deadEndN; rotYFallback = camFlip + 0f;   shapeTypeStr = "DeadEnd"; break;
-                        case RoadCellType.DeadEnd_E: prefabTemplate = deadEndE; rotYFallback = camFlip + 90f;  shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_N: prefabTemplate = deadEndN; rotYFallback = camFlip + 0f; shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_E: prefabTemplate = deadEndE; rotYFallback = camFlip + 90f; shapeTypeStr = "DeadEnd"; break;
                         case RoadCellType.DeadEnd_S: prefabTemplate = deadEndS; rotYFallback = camFlip + 180f; shapeTypeStr = "DeadEnd"; break;
-                        case RoadCellType.DeadEnd_W: prefabTemplate = deadEndW; rotYFallback = camFlip - 90f;  shapeTypeStr = "DeadEnd"; break;
+                        case RoadCellType.DeadEnd_W: prefabTemplate = deadEndW; rotYFallback = camFlip - 90f; shapeTypeStr = "DeadEnd"; break;
 
                         case RoadCellType.GenericRoad: prefabTemplate = genericRoad; rotYFallback = camFlip; shapeTypeStr = "Straight"; break;
                     }
@@ -154,56 +154,56 @@ namespace BusAway.Gameplay
                         // NO ROTATION OVERRIDE: Prefab retains its own saved rotation
                         tileObj.name = $"Tile_{x}_{y}_{shapeTypeStr}";
 
-                    // Nếu tile này cần spawn thêm canopy (Bus Stop prop) và có gán prefab
-                    if (busStopPropTemplate != null)
-                    {
-                        // Chỉ spawn 1 lần cho cặp Bus Stop bằng cách check "_Left"
-                        if (cell.ToString().Contains("_Left"))
+                        // Nếu tile này cần spawn thêm canopy (Bus Stop prop) và có gán prefab
+                        if (busStopPropTemplate != null)
                         {
-                            GameObject propObj;
+                            // Chỉ spawn 1 lần cho cặp Bus Stop bằng cách check "_Left"
+                            if (cell.ToString().Contains("_Left"))
+                            {
+                                GameObject propObj;
 #if UNITY_EDITOR
-                            if (!Application.isPlaying) propObj = (GameObject)PrefabUtility.InstantiatePrefab(busStopPropTemplate, roadRoot.transform);
-                            else propObj = Instantiate(busStopPropTemplate, roadRoot.transform);
+                                if (!Application.isPlaying) propObj = (GameObject)PrefabUtility.InstantiatePrefab(busStopPropTemplate, roadRoot.transform);
+                                else propObj = Instantiate(busStopPropTemplate, roadRoot.transform);
 #else
                             propObj = Instantiate(busStopPropTemplate, roadRoot.transform);
 #endif
-                            Vector3 rightPos = pos;
-                            Vector3 branchOffsetWorld = Vector3.zero;
+                                Vector3 rightPos = pos;
+                                Vector3 branchOffsetWorld = Vector3.zero;
 
-                            if (cell == RoadCellType.HalfT_BusStop_N_Left) 
-                            { 
-                                rightPos = new Vector3(offsetX - (x + 1) * tSize, 0, offsetZ - y * tSize); // Right is x+1
-                                branchOffsetWorld = new Vector3(0, 0, -tSize); // Branch y+1 (World -Z)
-                            }
-                            else if (cell == RoadCellType.HalfT_BusStop_E_Left)
-                            {
-                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y - 1) * tSize); // Right is y-1
-                                branchOffsetWorld = new Vector3(-tSize, 0, 0); // Branch x+1 (World -X)
-                            }
-                            else if (cell == RoadCellType.HalfT_BusStop_W_Left)
-                            {
-                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y + 1) * tSize); // Right is y+1
-                                branchOffsetWorld = new Vector3(tSize, 0, 0); // Branch x-1 (World +X)
-                            }
-                            else if (cell == RoadCellType.HalfT_BusStop_S_Left)
-                            {
-                                rightPos = new Vector3(offsetX - (x - 1) * tSize, 0, offsetZ - y * tSize); // Right is x-1
-                                branchOffsetWorld = new Vector3(0, 0, tSize); // Branch y-1 (World +Z)
-                            }
+                                if (cell == RoadCellType.HalfT_BusStop_N_Left)
+                                {
+                                    rightPos = new Vector3(offsetX - (x + 1) * tSize, 0, offsetZ - y * tSize); // Right is x+1
+                                    branchOffsetWorld = new Vector3(0, 0, -tSize); // Branch y+1 (World -Z)
+                                }
+                                else if (cell == RoadCellType.HalfT_BusStop_E_Left)
+                                {
+                                    rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y - 1) * tSize); // Right is y-1
+                                    branchOffsetWorld = new Vector3(-tSize, 0, 0); // Branch x+1 (World -X)
+                                }
+                                else if (cell == RoadCellType.HalfT_BusStop_W_Left)
+                                {
+                                    rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y + 1) * tSize); // Right is y+1
+                                    branchOffsetWorld = new Vector3(tSize, 0, 0); // Branch x-1 (World +X)
+                                }
+                                else if (cell == RoadCellType.HalfT_BusStop_S_Left)
+                                {
+                                    rightPos = new Vector3(offsetX - (x - 1) * tSize, 0, offsetZ - y * tSize); // Right is x-1
+                                    branchOffsetWorld = new Vector3(0, 0, tSize); // Branch y-1 (World +Z)
+                                }
 
-                            Vector3 centerPos = (pos + rightPos) / 2f;
-                            propObj.transform.position = centerPos + branchOffsetWorld;
-                            
-                            // Revert to user's native rotation
-                            propObj.transform.rotation = busStopPropTemplate.transform.rotation;
-                            
-                            // Scale x2 as requested
-                            propObj.transform.localScale = busStopPropTemplate.transform.localScale * 2f;
+                                Vector3 centerPos = (pos + rightPos) / 2f;
+                                propObj.transform.position = centerPos + branchOffsetWorld;
 
-                            // Đặt tên
-                            propObj.name = $"BusStop_Prop_{x}_{y}";
+                                propObj.transform.rotation = busStopPropTemplate.transform.rotation;
+
+                                // Scale as requested
+                                Vector3 origScale = busStopPropTemplate.transform.localScale;
+                                propObj.transform.localScale = new Vector3(origScale.x * 2f, origScale.y * 1f, origScale.z * 1.25f);
+
+                                // Đặt tên
+                                propObj.name = $"BusStop_Prop_{x}_{y}";
+                            }
                         }
-                    }
                     }
                     else
                     {
@@ -239,13 +239,13 @@ namespace BusAway.Gameplay
                         {
                             GameObject a1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
                             a1.transform.SetParent(tileObj.transform, false);
-                            a1.transform.localPosition = new Vector3(0, offsetH, tSize/4f);
-                            a1.transform.localScale = new Vector3(asphaltWidth, 0.11f, tSize/2f + 0.01f);
+                            a1.transform.localPosition = new Vector3(0, offsetH, tSize / 4f);
+                            a1.transform.localScale = new Vector3(asphaltWidth, 0.11f, tSize / 2f + 0.01f);
 
                             GameObject a2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
                             a2.transform.SetParent(tileObj.transform, false);
-                            a2.transform.localPosition = new Vector3(tSize/4f, offsetH, 0);
-                            a2.transform.localScale = new Vector3(tSize/2f + 0.01f, 0.11f, asphaltWidth);
+                            a2.transform.localPosition = new Vector3(tSize / 4f, offsetH, 0);
+                            a2.transform.localScale = new Vector3(tSize / 2f + 0.01f, 0.11f, asphaltWidth);
                             asphalts = new Renderer[] { a1.GetComponent<Renderer>(), a2.GetComponent<Renderer>() };
                         }
                         else if (shapeTypeStr == "HalfT")
@@ -257,9 +257,9 @@ namespace BusAway.Gameplay
 
                             GameObject a2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
                             a2.transform.SetParent(tileObj.transform, false);
-                            a2.transform.localPosition = new Vector3(tSize/4f, offsetH, 0);
-                            a2.transform.localScale = new Vector3(tSize/2f + 0.01f, 0.11f, asphaltWidth);
-                            
+                            a2.transform.localPosition = new Vector3(tSize / 4f, offsetH, 0);
+                            a2.transform.localScale = new Vector3(tSize / 2f + 0.01f, 0.11f, asphaltWidth);
+
                             asphalts = new Renderer[] { a1.GetComponent<Renderer>(), a2.GetComponent<Renderer>() };
                         }
                         else if (shapeTypeStr == "Cross")
@@ -297,8 +297,9 @@ namespace BusAway.Gameplay
             foreach (var busData in activeLevelData.buses)
             {
                 GameObject busObj;
-                
-                if (busPrefab != null) {
+
+                if (busPrefab != null)
+                {
 #if UNITY_EDITOR
                     if (!Application.isPlaying) busObj = (GameObject)PrefabUtility.InstantiatePrefab(busPrefab, busRoot.transform);
                     else busObj = Instantiate(busPrefab, busRoot.transform);
@@ -306,11 +307,11 @@ namespace BusAway.Gameplay
                     busObj = Instantiate(busPrefab, busRoot.transform);
 #endif
                 }
-                else 
+                else
                 {
                     busObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     busObj.transform.SetParent(busRoot.transform);
-                    busObj.transform.localScale = new Vector3(1.5f, 1.5f, 3.0f); 
+                    busObj.transform.localScale = new Vector3(1.5f, 1.5f, 3.0f);
 
                     var renderer = busObj.GetComponent<Renderer>();
                     if (renderer != null)
@@ -326,7 +327,7 @@ namespace BusAway.Gameplay
                 busObj.transform.position = busPos + Vector3.up * 0.5f;
                 busObj.transform.eulerAngles = busData.eulerAngles;
             }
-            
+
             // 3. Build Crowd Lands
             BuildCrowdLands();
 
@@ -337,7 +338,7 @@ namespace BusAway.Gameplay
             {
                 if (cameraFramer == null) cameraFramer = GetComponent<LevelCameraFramer>();
                 if (cameraFramer == null) cameraFramer = gameObject.AddComponent<LevelCameraFramer>();
-                
+
                 cameraFramer.FrameLevel(roadRoot.transform);
             }
         }
@@ -374,7 +375,7 @@ namespace BusAway.Gameplay
                 };
                 activeLevelData.resolvedLands.Add(landCfg);
                 totalAgents += count;
-                
+
                 if (BusAway.CrowdSystem.CrowdManager.Instance != null)
                 {
                     BusAway.CrowdSystem.CrowdManager.Instance.SpawnLand(i, count, landCfg.color);
@@ -402,7 +403,7 @@ namespace BusAway.Gameplay
         {
             Transform[] children = new Transform[transform.childCount];
             for (int i = 0; i < transform.childCount; i++) children[i] = transform.GetChild(i);
-            
+
             foreach (var t in children)
             {
                 if (Application.isPlaying) Destroy(t.gameObject);
