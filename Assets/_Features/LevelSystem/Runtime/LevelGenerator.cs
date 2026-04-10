@@ -306,6 +306,7 @@ namespace BusAway.Gameplay
 #else
                     busObj = Instantiate(busPrefab, busRoot.transform);
 #endif
+                    busObj.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
                 }
                 else
                 {

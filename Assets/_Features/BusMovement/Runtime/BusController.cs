@@ -6,6 +6,9 @@ namespace BusMovement
 {
     public class BusController : MonoBehaviour
     {
+        public Color busColor;
+        public int currentPassengerCount = 0;
+
         [Header("Bus Parts")]
         public Transform busFloor;
         public Transform busWallF;
@@ -29,12 +32,19 @@ namespace BusMovement
         public TrailRenderer[] skidMarks;
         public ParticleSystem sparkBlingVFX;
 
+        [HideInInspector]
+        public Vector2Int currentGridPos;
+        [HideInInspector]
+        public Vector2Int previousGridPos;
+
         private PrimeTween.Sequence moveSequence;
         private PrimeTween.Sequence brakeSequence;
         private PrimeTween.Tween wobbleTween;
         private PrimeTween.Tween idleTween;
         private Transform visualContainer;
         private Vector3 lastPos;
+
+        public event System.Action<BusController> OnPathComplete;
 
         private void Awake()
         {
@@ -151,7 +161,10 @@ namespace BusMovement
                 brakeSequence = PrimeTween.Sequence.Create()
                     .Chain(PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad))
                     .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce))
-                    .OnComplete(() => StartVibration());
+                    .OnComplete(() => {
+                        StartVibration();
+                        OnPathComplete?.Invoke(this);
+                    });
             });
         }
         
@@ -184,6 +197,7 @@ namespace BusMovement
 
         public void SetColor(Color baseColor)
         {
+            this.busColor = baseColor;
             Color.RGBToHSV(baseColor, out float h, out float s, out float v);
 
             // Thay đổi value (độ sáng) của màu nền (sáng hơn xíu) và tường (đậm hơn xíu)

@@ -30,6 +30,9 @@ namespace BusAway.Gameplay
         public int currentCoins = 0;
         public int goalCoins = 0;
 
+        private List<Vector2Int> mainLoopPath = new List<Vector2Int>();
+        private Dictionary<Color, Vector2Int> busStopStems = new Dictionary<Color, Vector2Int>();
+
         [Header("Serialize Fields")]
         [SerializeField] private GameObject PlayPanel;
 
@@ -78,6 +81,9 @@ namespace BusAway.Gameplay
             // Wait a frame for transforms to settle
             yield return null;
 
+            // Extract the road network loop
+            BuildRoadNetwork();
+
             // 2. Setup Bus Stops
             SetupBusStops(data);
 
@@ -104,8 +110,116 @@ namespace BusAway.Gameplay
             State = GameState.Playing;
             Debug.Log("<color=green>Game Started!</color>");
 
-            // TODO: Enable player input or start timer here
+            // Extract initial buses from queue and place them at bus stops to enter the grid
+            var queuedBuses = new List<GameObject>();
+            Transform busRoot = this.transform.Find("BusesRoot");
+            if (busRoot != null)
+            {
+                foreach (Transform t in busRoot)
+                {
+                    if (t.name.Contains("Bus_Queued")) queuedBuses.Add(t.gameObject);
+                }
+            }
 
+            var stops = FindObjectsOfType<BusStopController>();
+            int spawnCount = Mathf.Min(stops.Length, queuedBuses.Count);
+
+            float tileSize = levelGenerator != null && levelGenerator.activeLevelData != null ? levelGenerator.activeLevelData.tileSize : 4f;
+
+            for (int i = 0; i < spawnCount; i++)
+            {
+                var bus = queuedBuses[i];
+                var stop = stops[i];
+                
+                bus.SetActive(true);
+                // Rename to indicate active
+                bus.name = bus.name.Replace("Bus_Queued", "Bus_Active");
+                
+                // Spawn bus INSIDE the Stop's stem (pull back by half a tile)
+                Vector3 stopPos = stop.transform.position + Vector3.up * 0.5f;
+                Vector3 startPos = stopPos - stop.transform.forward * (tileSize * 0.45f);
+                bus.transform.position = startPos;
+                bus.transform.rotation = stop.transform.rotation;
+                
+                // Make the bus drive out of the stop into the road center
+                var busCtrl = bus.GetComponent<BusMovement.BusController>();
+                if (busCtrl != null)
+                {
+                    busCtrl.currentGridPos = WorldToGrid(startPos);
+                    busCtrl.previousGridPos = WorldToGrid(startPos - stop.transform.forward * tileSize);
+                    busCtrl.OnPathComplete += OnBusPathComplete;
+
+                    Vector3 roadCenter = stopPos + stop.transform.forward * (tileSize * 0.5f);
+                    busCtrl.MoveAlongPath(new List<Vector3> { startPos, roadCenter });
+                }
+            }
+
+        }
+
+        private void OnBusPathComplete(BusMovement.BusController bus)
+        {
+            if (State != GameState.Playing) return;
+
+            Vector2Int currentGridPos = WorldToGrid(bus.transform.position);
+            bus.previousGridPos = bus.currentGridPos;
+            bus.currentGridPos = currentGridPos;
+
+            int capacity = levelGenerator.activeLevelData.agentsPerBus;
+            bool isFull = bus.currentPassengerCount >= capacity;
+
+            Vector2Int nextPos = new Vector2Int(-1, -1);
+
+            // If full, try to enter its own stop
+            if (isFull && busStopStems.ContainsKey(bus.busColor))
+            {
+                Vector2Int targetStem = busStopStems[bus.busColor];
+                if (IsAdjacent(currentGridPos, targetStem))
+                {
+                    nextPos = targetStem;
+                }
+            }
+
+            if (nextPos.x == -1)
+            {
+                // Find next loop tile
+                int idx = mainLoopPath.IndexOf(currentGridPos);
+                if (idx != -1)
+                {
+                    nextPos = mainLoopPath[(idx + 1) % mainLoopPath.Count];
+                    // Ensure it doesn't reverse if moving backward for some reason
+                    if (nextPos == bus.previousGridPos)
+                    {
+                        nextPos = mainLoopPath[(idx - 1 + mainLoopPath.Count) % mainLoopPath.Count];
+                    }
+                }
+                else
+                {
+                    // Fallback
+                    var neighbors = GetConnectedNeighbors(currentGridPos, levelGenerator.activeLevelData.GetCell(currentGridPos.x, currentGridPos.y));
+                    foreach (var n in neighbors)
+                    {
+                        if (n != bus.previousGridPos)
+                        {
+                            nextPos = n;
+                            break;
+                        }
+                    }
+                    if (nextPos.x == -1 && neighbors.Count > 0) nextPos = neighbors[0];
+                }
+            }
+
+            if (nextPos.x != -1)
+            {
+                Vector3 targetWorld = GridToWorld(nextPos);
+                targetWorld.y = bus.transform.position.y;
+                bus.MoveAlongPath(new List<Vector3> { bus.transform.position, targetWorld });
+
+                // If it reached its stem, it parks
+                if (busStopStems.ContainsKey(bus.busColor) && nextPos == busStopStems[bus.busColor])
+                {
+                    bus.OnPathComplete -= OnBusPathComplete;
+                }
+            }
         }
 
         private void SetupBusStops(LevelDesignData data)
@@ -162,6 +276,7 @@ namespace BusAway.Gameplay
                 {
                     GameObject busObj = Instantiate(busPrefab, busRoot);
                     busObj.name = $"Bus_Queued_{busColor.ToString()}_{i}";
+                    busObj.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
 
 
                     var busCtrl = busObj.GetComponent<BusMovement.BusController>();
@@ -217,5 +332,125 @@ namespace BusAway.Gameplay
                 Debug.Log("<color=green>LEVEL CLEARED!</color>");
             }
         }
+
+        #region Path Finding & Grid Helpers
+
+        private void BuildRoadNetwork()
+        {
+            var data = levelGenerator.activeLevelData;
+            mainLoopPath.Clear();
+            busStopStems.Clear();
+
+            // Find stems
+            var stops = FindObjectsOfType<BusStopController>();
+            foreach(var stop in stops)
+            {
+                Vector2Int pos = WorldToGrid(stop.transform.position);
+                Vector2Int[] neighbors = { pos + Vector2Int.up, pos + Vector2Int.down, pos + Vector2Int.left, pos + Vector2Int.right };
+                foreach (var n in neighbors)
+                {
+                    var cell = data.GetCell(n.x, n.y);
+                    if (cell != RoadCellType.Empty && cell.ToString().Contains("DeadEnd"))
+                    {
+                        busStopStems[stop.stopColor] = n;
+                        break;
+                    }
+                }
+            }
+
+            // Find start of loop
+            Vector2Int start = new Vector2Int(-1, -1);
+            for (int y = 0; y < data.gridHeight; y++)
+            {
+                for (int x = 0; x < data.gridWidth; x++)
+                {
+                    var cell = data.GetCell(x, y);
+                    if (cell != RoadCellType.Empty && !cell.ToString().Contains("DeadEnd"))
+                    {
+                        start = new Vector2Int(x, y);
+                        break;
+                    }
+                }
+                if (start.x != -1) break;
+            }
+
+            if (start.x == -1) return;
+
+            Vector2Int current = start;
+            Vector2Int previous = new Vector2Int(-2, -2);
+            
+            while (true)
+            {
+                mainLoopPath.Add(current);
+                var cell = data.GetCell(current.x, current.y);
+                List<Vector2Int> neighbors = GetConnectedNeighbors(current, cell);
+                
+                Vector2Int next = new Vector2Int(-1, -1);
+                foreach (var n in neighbors)
+                {
+                    if (n != previous)
+                    {
+                        next = n;
+                        break;
+                    }
+                }
+                
+                if (next.x == -1 || next == start) break;
+                previous = current;
+                current = next;
+                if (mainLoopPath.Count > 1000) break;
+            }
+            Debug.Log($"Built Main Road Loop with {mainLoopPath.Count} tiles.");
+        }
+
+        private List<Vector2Int> GetConnectedNeighbors(Vector2Int pos, RoadCellType cell)
+        {
+            var list = new List<Vector2Int>();
+            if (cell == RoadCellType.Straight_NS) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(0, 1)); }
+            else if (cell == RoadCellType.Straight_EW) { list.Add(pos + new Vector2Int(1, 0)); list.Add(pos + new Vector2Int(-1, 0)); }
+            else if (cell == RoadCellType.Corner_NE) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(1, 0)); }
+            else if (cell == RoadCellType.Corner_NW) { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(-1, 0)); }
+            else if (cell == RoadCellType.Corner_SE) { list.Add(pos + new Vector2Int(0, 1)); list.Add(pos + new Vector2Int(1, 0)); }
+            else if (cell == RoadCellType.Corner_SW) { list.Add(pos + new Vector2Int(0, 1)); list.Add(pos + new Vector2Int(-1, 0)); }
+            else if (cell.ToString().Contains("HalfT_BusStop"))
+            {
+                if (cell.ToString().Contains("_N_") || cell.ToString().Contains("_S_")) { list.Add(pos + new Vector2Int(1, 0)); list.Add(pos + new Vector2Int(-1, 0)); }
+                else { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(0, 1)); }
+            }
+            
+            var filtered = new List<Vector2Int>();
+            foreach(var n in list) {
+                var nCell = levelGenerator.activeLevelData.GetCell(n.x, n.y);
+                if (nCell != RoadCellType.Empty && !nCell.ToString().Contains("DeadEnd")) filtered.Add(n);
+            }
+            return filtered;
+        }
+
+        private Vector2Int WorldToGrid(Vector3 worldPos)
+        {
+            float tSize = levelGenerator.activeLevelData.tileSize;
+            float offsetX = (levelGenerator.activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
+            float offsetZ = (levelGenerator.activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
+            
+            int x = Mathf.RoundToInt((offsetX - worldPos.x) / tSize);
+            int y = Mathf.RoundToInt((offsetZ - worldPos.z) / tSize);
+            return new Vector2Int(x, y);
+        }
+
+        private Vector3 GridToWorld(Vector2Int gridPos)
+        {
+            float tSize = levelGenerator.activeLevelData.tileSize;
+            float offsetX = (levelGenerator.activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
+            float offsetZ = (levelGenerator.activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
+            return new Vector3(offsetX - gridPos.x * tSize, 0f, offsetZ - gridPos.y * tSize);
+        }
+
+        private bool IsAdjacent(Vector2Int a, Vector2Int b)
+        {
+            return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) == 1;
+        }
+
+        #endregion
+
     }
 }
