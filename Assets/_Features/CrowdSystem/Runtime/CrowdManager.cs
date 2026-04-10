@@ -19,6 +19,12 @@ namespace BusAway.CrowdSystem
         public float separationWeight = 1.5f;
         public float targetWeight = 1.0f;
         public float arrivalDistance = 0.1f;
+
+        [Header("Land Spawning")]
+        public float landSpacingX = 4.0f;
+        public float agentSpacingX = 0.6f;
+        public float agentSpacingZ = 0.6f;
+        public Vector3 landBaseOffset = new Vector3(0, 0, -2.0f);
         
         [Header("Rendering")]
         public Mesh agentMesh;
@@ -133,6 +139,32 @@ namespace BusAway.CrowdSystem
             activeCount++;
             return index;
         }
+
+        /// <summary>
+        /// Spawns a batch of agents for one "land" column.
+        /// </summary>
+        public void SpawnLand(int landIndex, int agentCount, Color color)
+        {
+            Debug.Assert(agentCount % 4 == 0, $"SpawnLand: agentCount must be multiple of 4, got {agentCount}");
+
+            Vector3 basePos = landBaseOffset + new Vector3(landIndex * landSpacingX, 0, 0);
+
+            for (int i = 0; i < agentCount; i++)
+            {
+                int row = i / 4;
+                int col = i % 4;
+                Vector3 pos = basePos + new Vector3(col * agentSpacingX, 0, -row * agentSpacingZ);
+
+                SpawnCharacter(pos, pos, color);
+            }
+
+            Debug.Log($"Land[{landIndex}] spawned: {agentCount} agents, color={color}");
+        }
+
+        /// <summary>
+        /// Gets the current active agent count. Used for testing.
+        /// </summary>
+        public int GetActiveCountForTesting() => activeCount;
 
         /// <summary>
         /// Removes a character by index, swapping with the last agent to keep arrays packed.
