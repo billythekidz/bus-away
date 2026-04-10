@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8626211495002440069
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1139479779292454085}
+  - component: {fileID: 3830535819967523841}
+  - component: {fileID: 1025259888548663513}
+  m_Layer: 0
+  m_Name: LevelGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1139479779292454085
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8626211495002440069}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3830535819967523841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8626211495002440069}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41226bfbf735dbf4bbab7dfbe1d91170, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BusAway.Gameplay.LevelGenerator
+  activeLevelData: {fileID: 0}
+  straightNS: {fileID: 7849522091454530481, guid: f572591bba5e1d04dbc0496ed24271e2, type: 3}
+  straightEW: {fileID: 6108590643378040638, guid: 3432db73e9f5384459a52f0b49130251, type: 3}
+  cornerSE: {fileID: 5305996110316779416, guid: ba6b0a7b73f8d554d9a7a8a2e22df7e8, type: 3}
+  cornerNE: {fileID: 4779139831790761678, guid: c922f942e1ff3894ca16f13fb776459f, type: 3}
+  cornerNW: {fileID: 3918711731900378409, guid: 7d86129354bdf6549ab24a26046dc151, type: 3}
+  cornerSW: {fileID: 7636155636682014831, guid: 5f879ce83fbb93b4283d7bdab7e6ca75, type: 3}
+  halfT_N_Left: {fileID: 6706311701700191217, guid: e43987d8d70901345a9bfc3964b1a35b, type: 3}
+  halfT_N_Right: {fileID: 6559633276498426038, guid: a0a2d87a9a95679448a98b62b1868056, type: 3}
+  halfT_E_Left: {fileID: 9098841694805444263, guid: cd5a0a64a24830d4788d13f406b4ae0f, type: 3}
+  halfT_E_Right: {fileID: 317432366195728498, guid: 100ed7ff0ac49854ca903365a413d06a, type: 3}
+  halfT_S_Left: {fileID: 5650155210443999877, guid: 343cbe90ed7877448a3476fbee8d1180, type: 3}
+  halfT_S_Right: {fileID: 5529023439758407469, guid: 593a334b55d71fd4a8694f5384df88ed, type: 3}
+  halfT_W_Left: {fileID: 6904159134661730247, guid: 69fe783cd6bf3eb4f81c21d40ef0acdd, type: 3}
+  halfT_W_Right: {fileID: 2018235552457445623, guid: feb3ab556a30e0a4ca23f7c45718b6bd, type: 3}
+  busStopPropN: {fileID: 3890807406421976248, guid: 4c4c922fff69dce4887dee084df864ed, type: 3}
+  busStopPropE: {fileID: 7051981449963627236, guid: 47fea3ab80821934f9b805ac9d0fc676, type: 3}
+  busStopPropS: {fileID: 8305446626857697522, guid: 21eab898772eb6149adf2998b1bd9a25, type: 3}
+  busStopPropW: {fileID: 1103096040531174673, guid: e1459602105155f419da152390817eae, type: 3}
+  crossRoad: {fileID: 8059647135804322579, guid: d83071509ace40f4c827d21e73a5c31b, type: 3}
+  genericRoad: {fileID: 6108590643378040638, guid: 5531521581f6b5d4abdfcbfb8bd58bd3, type: 3}
+  deadEndN: {fileID: 0}
+  deadEndE: {fileID: 0}
+  deadEndS: {fileID: 0}
+  deadEndW: {fileID: 0}
+  busPrefab: {fileID: 0}
+  autoFrameCameraOnBuild: 1
+  cameraFramer: {fileID: 1025259888548663513}
+--- !u!114 &1025259888548663513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8626211495002440069}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb8357c2cd9ee45429636dc288647c34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BusAway.Gameplay.LevelCameraFramer
+  padding: 4
+  elevationAngle: 72
+  orbitAngle: 0
+  distanceMultiplier: 1.4
+  fieldOfView: 35

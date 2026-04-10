@@ -79,6 +79,9 @@ namespace BusAway.Level
         [Tooltip("Score target to clear this level")]
         public int levelGoalCoin = 160;
 
+        [Tooltip("Number of bus stops to generate in the map")]
+        public int busStopLength = 2;
+
         [Header("Buses")]
         public List<BusSpawnData> buses = new List<BusSpawnData>();
 

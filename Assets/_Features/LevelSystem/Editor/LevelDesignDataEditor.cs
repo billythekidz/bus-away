@@ -22,6 +22,7 @@ namespace BusAway.LevelEditor
             GUILayout.Label("Map Level Configuration", EditorStyles.boldLabel);
             data.gridWidth = EditorGUILayout.IntSlider("Grid Width", data.gridWidth, 4, 30);
             data.gridHeight = EditorGUILayout.IntSlider("Grid Height", data.gridHeight, 4, 30);
+            data.busStopLength = Mathf.Max(1, EditorGUILayout.IntField("Bus Stop Length", data.busStopLength));
 
             if (data.grid == null || data.grid.Length != data.gridWidth * data.gridHeight)
             {
@@ -251,97 +252,76 @@ namespace BusAway.LevelEditor
             for (int i = 0; i < data.grid.Length; i++)
                 data.grid[i] = RoadCellType.Empty;
 
-            // Guarantee a complete cycle by creating an outer ring road
-            for (int x = 0; x < data.gridWidth; x++)
+            int minX = 1;
+            int minY = 1;
+            int maxX = data.gridWidth - 2;
+            int maxY = data.gridHeight - 2;
+
+            if (maxX <= minX || maxY <= minY)
             {
-                data.grid[0 * data.gridWidth + x] = RoadCellType.GenericRoad;
-                data.grid[(data.gridHeight - 1) * data.gridWidth + x] = RoadCellType.GenericRoad;
-            }
-            for (int y = 0; y < data.gridHeight; y++)
-            {
-                data.grid[y * data.gridWidth + 0] = RoadCellType.GenericRoad;
-                data.grid[y * data.gridWidth + (data.gridWidth - 1)] = RoadCellType.GenericRoad;
+                minX = 0; minY = 0; maxX = data.gridWidth - 1; maxY = data.gridHeight - 1;
             }
 
-            // minSize is inversely proportional to complexity (1 -> 6, 5 -> 2)
-            int minSize = Mathf.Max(2, 7 - complexity);
-            
-            // Run BSP inside the ring
-            RectInt rootArea = new RectInt(1, 1, data.gridWidth - 2, data.gridHeight - 2);
-            RecursiveDivide(data, rootArea, minSize, true);
+            // Draw primary ring (no crosses, no BSP, just a perfect loop to avoid unwanted T-junctions)
+            for (int x = minX; x <= maxX; x++)
+            {
+                data.SetCell(x, minY, RoadCellType.GenericRoad);
+                data.SetCell(x, maxY, RoadCellType.GenericRoad);
+            }
+            for (int y = minY; y <= maxY; y++)
+            {
+                data.SetCell(minX, y, RoadCellType.GenericRoad);
+                data.SetCell(maxX, y, RoadCellType.GenericRoad);
+            }
 
-            // Scatter Bus Stops on straight road segments
-            int numBusStops = 1 + complexity;
-            int attempts = 100;
-
+            // Scatter exactly the right number of Bus Stops as paired branches (2 cells wide)
+            int numBusStops = data.busStopLength;
+            int attempts = 500;
             while (numBusStops > 0 && attempts-- > 0)
             {
-                int x = Random.Range(1, data.gridWidth - 1);
-                int y = Random.Range(1, data.gridHeight - 1);
-                int idx = y * data.gridWidth + x;
+                int x = Random.Range(minX, maxX); 
+                int y = Random.Range(minY, maxY);
+                
+                bool isHorizontal = Random.value > 0.5f;
 
-                if (data.grid[idx] == RoadCellType.GenericRoad)
+                if (isHorizontal)
                 {
-                    bool n = data.GetCell(x, y + 1) != RoadCellType.Empty;
-                    bool s = data.GetCell(x, y - 1) != RoadCellType.Empty;
-                    bool e = data.GetCell(x + 1, y) != RoadCellType.Empty;
-                    bool w = data.GetCell(x - 1, y) != RoadCellType.Empty;
-
-                    // Theo quy tắc mới, T-junction = BusStop.
-                    // Random generation hiện tại tạo vòng (ring) và BSP, chưa có nhánh cụt T-junction một chiều.
-                    // (Chúng ta có thể thêm logic tạo nhánh T sau, hiện tại để trống đoạn này hoặc nối ra 1 ô).
-                    if ((n && s && !e && !w) || (e && w && !n && !s))
+                    if (data.GetCell(x, y) == RoadCellType.GenericRoad && data.GetCell(x + 1, y) == RoadCellType.GenericRoad)
                     {
-                        // TODO: Tạo T-junction ở đây bằng cách mọc ra 1 GenericRoad vuông góc
-                        numBusStops--;
+                        bool canPlace = data.GetCell(x, y + 1) == RoadCellType.Empty && data.GetCell(x + 1, y + 1) == RoadCellType.Empty && 
+                                        data.GetCell(x, y - 1) == RoadCellType.Empty && data.GetCell(x + 1, y - 1) == RoadCellType.Empty;
+                        if (canPlace)
+                        {
+                            int dir = Random.value > 0.5f ? 1 : -1;
+                            int targetY = y + dir;
+                            if (targetY >= 0 && targetY < data.gridHeight)
+                            {
+                                data.SetCell(x, targetY, RoadCellType.GenericRoad);
+                                data.SetCell(x + 1, targetY, RoadCellType.GenericRoad);
+                                numBusStops--;
+                            }
+                        }
                     }
                 }
-            }
-        }
-
-        private void RecursiveDivide(LevelDesignData data, RectInt area, int minSize, bool isRoot)
-        {
-            bool canSplitH = area.height >= minSize * 2 + 1;
-            bool canSplitV = area.width >= minSize * 2 + 1;
-
-            if (!canSplitH && !canSplitV)
-            {
-                if (isRoot)
+                else
                 {
-                    // Fallback for very small grids to ensure at least one road is carved
-                    minSize = 1;
-                    canSplitH = area.height >= 3;
-                    canSplitV = area.width >= 3;
-                    if (!canSplitH && !canSplitV) return; // Still completely too small (e.g. 2x2)
+                    if (data.GetCell(x, y) == RoadCellType.GenericRoad && data.GetCell(x, y + 1) == RoadCellType.GenericRoad)
+                    {
+                        bool canPlace = data.GetCell(x + 1, y) == RoadCellType.Empty && data.GetCell(x + 1, y + 1) == RoadCellType.Empty && 
+                                        data.GetCell(x - 1, y) == RoadCellType.Empty && data.GetCell(x - 1, y + 1) == RoadCellType.Empty;
+                        if (canPlace)
+                        {
+                            int dir = Random.value > 0.5f ? 1 : -1;
+                            int targetX = x + dir;
+                            if (targetX >= 0 && targetX < data.gridWidth)
+                            {
+                                data.SetCell(targetX, y, RoadCellType.GenericRoad);
+                                data.SetCell(targetX, y + 1, RoadCellType.GenericRoad);
+                                numBusStops--;
+                            }
+                        }
+                    }
                 }
-                else return;
-            }
-
-            bool splitHorizontal = false;
-            if (canSplitH && canSplitV)
-                splitHorizontal = Random.value > 0.5f;
-            else if (canSplitH)
-                splitHorizontal = true;
-            else if (canSplitV)
-                splitHorizontal = false;
-
-            if (splitHorizontal)
-            {
-                int splitY = Random.Range(area.yMin + minSize, area.yMax - minSize);
-                for (int x = area.xMin; x < area.xMax; x++)
-                    data.grid[splitY * data.gridWidth + x] = RoadCellType.GenericRoad;
-                
-                RecursiveDivide(data, new RectInt(area.x, area.y, area.width, splitY - area.y), minSize, false);
-                RecursiveDivide(data, new RectInt(area.x, splitY + 1, area.width, area.yMax - (splitY + 1)), minSize, false);
-            }
-            else
-            {
-                int splitX = Random.Range(area.xMin + minSize, area.xMax - minSize);
-                for (int y = area.yMin; y < area.yMax; y++)
-                    data.grid[y * data.gridWidth + splitX] = RoadCellType.GenericRoad;
-
-                RecursiveDivide(data, new RectInt(area.x, area.y, splitX - area.x, area.height), minSize, false);
-                RecursiveDivide(data, new RectInt(splitX + 1, area.y, area.xMax - (splitX + 1), area.height), minSize, false);
             }
         }
 
