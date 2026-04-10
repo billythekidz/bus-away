@@ -57,7 +57,7 @@ namespace BusAway.LevelEditor
                         }
                         else if (cell != RoadCellType.Empty)
                         {
-                            label = "▒";
+                            label = GetCellLabel(cell);
                             btnColor = new Color(0.3f, 0.3f, 0.3f);
                         }
 
@@ -259,6 +259,39 @@ namespace BusAway.LevelEditor
 
                 RecursiveDivide(data, new RectInt(area.x, area.y, splitX - area.x, area.height), minSize, false);
                 RecursiveDivide(data, new RectInt(splitX + 1, area.y, area.xMax - (splitX + 1), area.height), minSize, false);
+            }
+        }
+
+        private string GetCellLabel(RoadCellType cell)
+        {
+            switch (cell)
+            {
+                case RoadCellType.Straight_NS: return "║";
+                case RoadCellType.Straight_EW: return "═";
+                
+                case RoadCellType.Corner_SE: return "╔";
+                case RoadCellType.Corner_SW: return "╗";
+                case RoadCellType.Corner_NE: return "╚";
+                case RoadCellType.Corner_NW: return "╝";
+                
+                case RoadCellType.InnerCorner_SE: return "╝";
+                case RoadCellType.InnerCorner_SW: return "╚";
+                case RoadCellType.InnerCorner_NE: return "╗";
+                case RoadCellType.InnerCorner_NW: return "╔";
+                
+                case RoadCellType.TJunction_E: return "╠";
+                case RoadCellType.TJunction_W: return "╣";
+                case RoadCellType.TJunction_S: return "╦";
+                case RoadCellType.TJunction_N: return "╩";
+                
+                case RoadCellType.Cross: return "╬";
+                
+                case RoadCellType.DeadEnd_N: return "╨";
+                case RoadCellType.DeadEnd_E: return "╞";
+                case RoadCellType.DeadEnd_S: return "╥";
+                case RoadCellType.DeadEnd_W: return "╡";
+                
+                default: return "▒";
             }
         }
     }
