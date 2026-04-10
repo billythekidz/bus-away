@@ -148,5 +148,38 @@ namespace BusMovement
                 sparkBlingVFX.Play();
             }
         }
+
+        public void SetColor(Color baseColor)
+        {
+            Color.RGBToHSV(baseColor, out float h, out float s, out float v);
+
+            // Thay đổi value (độ sáng) của màu nền (sáng hơn xíu) và tường (đậm hơn xíu)
+            // Đảm bảo cắp giá trị không bị vượt quá 1 hoặc dưới 0
+            Color floorColor = Color.HSVToRGB(h, s, Mathf.Clamp01(v + 0.15f));
+            Color wallColor = Color.HSVToRGB(h, s, Mathf.Clamp01(v - 0.15f));
+
+            ApplyColorToProp(busFloor, floorColor);
+            ApplyColorToProp(busWallF, wallColor);
+            ApplyColorToProp(busWallR, wallColor);
+            ApplyColorToProp(busWallB, wallColor);
+        }
+
+        private void ApplyColorToProp(Transform part, Color color)
+        {
+            if (part == null) return;
+            
+            // Tìm Renderer trên chính object đó hoặc thư mục con
+            var renderer = part.GetComponent<Renderer>();
+            if (renderer == null) renderer = part.GetComponentInChildren<Renderer>();
+            
+            if (renderer != null)
+            {
+                // Dùng MaterialPropertyBlock để đổi màu mà không cần sinh thêm (instantiate) Material mới -> Optimize hiệu năng
+                MaterialPropertyBlock block = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor", color); // URP thường dùng _BaseColor
+                renderer.SetPropertyBlock(block);
+            }
+        }
     }
 }
