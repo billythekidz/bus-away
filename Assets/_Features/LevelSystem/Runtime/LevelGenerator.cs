@@ -304,8 +304,6 @@ namespace BusAway.Gameplay
         private void BuildCrowdLands()
         {
             if (activeLevelData == null) return;
-            // Note: CrowdManager integration will be added in the next step, skipping the call for now if it doesn't exist
-            // CrowdManager.Instance...
 
             int landCount = Random.Range(activeLevelData.minLandCount, activeLevelData.maxLandCount + 1);
 
@@ -329,6 +327,11 @@ namespace BusAway.Gameplay
                 };
                 activeLevelData.resolvedLands.Add(landCfg);
                 totalAgents += count;
+                
+                if (BusAway.CrowdSystem.CrowdManager.Instance != null)
+                {
+                    BusAway.CrowdSystem.CrowdManager.Instance.SpawnLand(i, count, landCfg.color);
+                }
             }
 
 #if UNITY_EDITOR

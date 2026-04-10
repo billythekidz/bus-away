@@ -298,27 +298,25 @@ public class GenerateProBuilderAddons : MonoBehaviour
         if (keepPositiveZ)
         {
             // HalfT_Left: open South (Z=+0.5) and West (X=-0.5)
-            // Go CW: NW -> NE notch -> concave arc -> SE outer arc -> SW
+            // Go CW: NW -> NE notch -> concave arc -> SE corner -> SW
             poly.Add(new Vector3(-0.5f,    y,  0.5f));   
             poly.Add(new Vector3(leftEdge, y,  0.5f));   
             poly.Add(new Vector3(arcCX,    y,  0.5f));   
             // Inner arc sweeping inwards from facing North (90deg) to facing East (0deg)
             poly.AddRange(ArcPoints(arcCX, 0f, arcRadius, 90f, 0f, y, 8));
-            // Outer arc SE corner: 0 to -90
-            poly.Add(new Vector3(right,    y, -(0.5f - outerRadius)));
-            poly.AddRange(ArcPoints(outerCX, -(0.5f - outerRadius), outerRadius, 0f, -90f, y, 6));
+            // Square SE corner
+            poly.Add(new Vector3(right,    y, -0.5f));
             poly.Add(new Vector3(leftEdge, y, -0.5f));   
             poly.Add(new Vector3(-0.5f,    y, -0.5f));   
         }
         else
         {
             // HalfT_Right: open North (Z=-0.5) and West (X=-0.5)
-            // We build it CW so normals face UP: NW -> NE outer arc -> SE notch -> concave arc -> SW
+            // We build it CW so normals face UP: NW -> NE square corner -> SE notch -> concave arc -> SW
             poly.Add(new Vector3(-0.5f,    y,  0.5f));   
             poly.Add(new Vector3(leftEdge, y,  0.5f));
-            // Outer arc NE corner: 90 to 0
-            poly.AddRange(ArcPoints(outerCX, (0.5f - outerRadius), outerRadius, 90f, 0f, y, 6)); 
-            poly.Add(new Vector3(right,    y,  (0.5f - outerRadius)));
+            // Square NE corner
+            poly.Add(new Vector3(right,    y,  0.5f));
             // Inner arc: 0 to -90
             poly.AddRange(ArcPoints(arcCX, 0f, arcRadius, 0f, -90f, y, 8));
             poly.Add(new Vector3(arcCX,    y, -0.5f));
