@@ -1,27 +1,42 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using BusAway.Level;
+using UnityEngine;
 
 namespace BusAway.Gameplay
 {
+    public enum GameState
+    {
+        Initializing,
+        Ready,
+        Playing,
+        GameOver,
+        LevelCleared
+    }
+
     [RequireComponent(typeof(LevelGenerator))]
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }
 
         public LevelGenerator levelGenerator;
-        
+
+
         [Header("Prefabs")]
         public GameObject busPrefab;
 
         [Header("Runtime State")]
+        public GameState State { get; private set; } = GameState.Initializing;
         public int currentCoins = 0;
         public int goalCoins = 0;
 
+        [Header("Serialize Fields")]
+        [SerializeField] private GameObject PlayPanel;
+
         private void Awake()
         {
-            if (Instance != null && Instance != this) 
+            if (Instance != null && Instance != this)
+
             {
                 Destroy(gameObject);
                 return;
@@ -32,9 +47,17 @@ namespace BusAway.Gameplay
         private void Start()
         {
             if (levelGenerator == null) levelGenerator = GetComponent<LevelGenerator>();
-            
+
+            SetupObjects();
             StartCoroutine(InitGameFlow());
         }
+
+
+        private void SetupObjects()
+        {
+            PlayPanel.SetActive(true);
+        }
+
 
         private IEnumerator InitGameFlow()
         {
@@ -65,7 +88,24 @@ namespace BusAway.Gameplay
             SetupCrowd(data);
 
             var stops = FindObjectsOfType<BusStopController>();
-            Debug.Log($"<color=yellow>Game Flow Initialized!</color> Goal: {goalCoins} Coins. Total Buses: {data.landColorPalette.Count * data.busesPerStop} | Bus Stops: {stops.Length}");
+            State = GameState.Ready;
+            Debug.Log($"<color=yellow>Game Flow Initialized!</color> Goal: {goalCoins} Coins. Total Buses: {data.landColorPalette.Count * data.busesPerStop} | Bus Stops: {stops.Length}. Waiting for Play().");
+        }
+
+        public void Play()
+        {
+            if (State != GameState.Ready)
+            {
+                Debug.LogWarning($"Cannot play from state: {State}");
+                return;
+            }
+
+
+            State = GameState.Playing;
+            Debug.Log("<color=green>Game Started!</color>");
+
+            // TODO: Enable player input or start timer here
+
         }
 
         private void SetupBusStops(LevelDesignData data)
@@ -79,51 +119,69 @@ namespace BusAway.Gameplay
             {
                 Color c = data.landColorPalette[i % data.landColorPalette.Count];
                 stops[i].SetColor(c);
+                stops[i].SetNumber(data.busesPerStop); // Hiển thị số lượng lên nóc trạm
             }
         }
 
         private void DispatchBuses(LevelDesignData data)
         {
             if (busPrefab == null) return;
-            
-            GameObject busRoot = new GameObject("BusesRoot");
-            busRoot.transform.SetParent(this.transform);
 
-            // We need to spawn 'busesPerStop' buses for EACH color in the landColorPalette.
-            // They need a path to move on. For now, we spawn them at the center or random road tile,
-            // later we will map the circular road track and pass the List<Vector3> path to BusController.
-            int busIndex = 0;
+            // RULE: Bao nhiêu bus stop thì có bấy nhiêu bus được chạy trong road một lúc (không hơn, không kém).
+            var stops = FindObjectsOfType<BusStopController>();
+            int activeBusLimit = stops != null ? stops.Length : 0;
+
+
+            Transform busRoot = this.transform.Find("BusesRoot");
+            if (busRoot == null)
+            {
+                var newRoot = new GameObject("BusesRoot");
+                newRoot.transform.SetParent(this.transform);
+                busRoot = newRoot.transform;
+            }
+
+            // Đếm số lượng xe đã được đặt sẵn trên grid (từ LevelGenerator)
+            Dictionary<Color, int> spawnedCountByColor = new Dictionary<Color, int>();
+            if (data.buses != null)
+            {
+                foreach (var b in data.buses)
+                {
+                    if (!spawnedCountByColor.ContainsKey(b.busColor)) spawnedCountByColor[b.busColor] = 0;
+                    spawnedCountByColor[b.busColor]++;
+                }
+            }
+
+            // Sinh toàn bộ xe bus còn thiếu đưa vào waiting queue (trong tương lai sẽ spawn xe từ queue vào grid khi có chỗ trống)
+            int queuedBusIndex = 0;
             foreach (Color busColor in data.landColorPalette)
             {
-                for (int i = 0; i < data.busesPerStop; i++)
+                int alreadySpawned = spawnedCountByColor.ContainsKey(busColor) ? spawnedCountByColor[busColor] : 0;
+                int remainingToSpawn = data.busesPerStop - alreadySpawned;
+
+                for (int i = 0; i < remainingToSpawn; i++)
                 {
-                    GameObject busObj = Instantiate(busPrefab, busRoot.transform);
-                    busObj.name = $"Bus_{busIndex}_{ColorUtility.ToHtmlStringRGB(busColor)}";
-                    busObj.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                    
-                    // Set color
+                    GameObject busObj = Instantiate(busPrefab, busRoot);
+                    busObj.name = $"Bus_Queued_{busColor.ToString()}_{i}";
+
+
                     var busCtrl = busObj.GetComponent<BusMovement.BusController>();
                     if (busCtrl != null)
                     {
                         busCtrl.SetColor(busColor);
                     }
-                    else
-                    {
-                        var renderer = busObj.GetComponentInChildren<Renderer>();
-                        if (renderer != null)
-                        {
-                            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                            mat.color = busColor;
-                            renderer.material = mat;
-                        }
-                    }
 
-                    // Tạm thời đặt rải rác. Về sau sẽ chạy thuật toán tìm đường (Pathfinding)
-                    // để lấy List<Vector3> road map và gọi busObj.GetComponent<BusController>().MoveAlongPath(...)
-                    busObj.transform.position = new Vector3(busIndex * 2f, 0.5f, 0); 
-                    busIndex++;
+                    // Tạm xếp các xe đang xếp hàng đợi ở bãi đỗ xa (ví dụ X = -20)
+                    // Hoặc ẩn đi (SetActive(false)), chờ logic đưa xe vào grid
+                    busObj.transform.position = new Vector3(-20f + queuedBusIndex * 2f, 0.5f, -20f);
+
+                    busObj.SetActive(false);
+
+                    queuedBusIndex++;
                 }
             }
+
+            int initialActive = data.buses != null ? data.buses.Count : 0;
+            Debug.Log($"<color=cyan>Bus Queue Manager</color>: Active Road Limit = {activeBusLimit} (1 per stop). Initial on grid = {initialActive}. Queued waiting = {queuedBusIndex}");
         }
 
         private void SetupCrowd(LevelDesignData data)
@@ -149,9 +207,12 @@ namespace BusAway.Gameplay
 
         public void AddCoin(int amount)
         {
+            if (State != GameState.Playing) return;
+
             currentCoins += amount;
             if (currentCoins >= goalCoins)
             {
+                State = GameState.LevelCleared;
                 // Level Clear Logic
                 Debug.Log("<color=green>LEVEL CLEARED!</color>");
             }

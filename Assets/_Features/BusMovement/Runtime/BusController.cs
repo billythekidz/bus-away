@@ -30,7 +30,9 @@ namespace BusMovement
         public ParticleSystem sparkBlingVFX;
 
         private PrimeTween.Sequence moveSequence;
+        private PrimeTween.Sequence brakeSequence;
         private PrimeTween.Tween wobbleTween;
+        private PrimeTween.Tween idleTween;
         private Transform visualContainer;
         private Vector3 lastPos;
 
@@ -47,6 +49,26 @@ namespace BusMovement
             if (busWallL) busWallL.SetParent(visualContainer, true);
 
             lastPos = transform.position;
+
+            StartVibration();
+        }
+
+        private void StartVibration()
+        {
+            if (!idleTween.isAlive && visualContainer != null)
+            {
+                // Engine vibrate (slight rapid vertical shake)
+                idleTween = PrimeTween.Tween.LocalPosition(visualContainer, new Vector3(0, 0.02f, 0), 0.035f, PrimeTween.Ease.InOutSine, cycles: -1, cycleMode: PrimeTween.CycleMode.Yoyo);
+            }
+        }
+
+        private void StopVibration()
+        {
+            if (idleTween.isAlive)
+            {
+                idleTween.Stop();
+                if (visualContainer != null) visualContainer.localPosition = Vector3.zero;
+            }
         }
 
         private void Update()
@@ -69,8 +91,14 @@ namespace BusMovement
 
             moveSequence.Stop();
             wobbleTween.Stop();
+            brakeSequence.Stop();
+            StopVibration();
             
-            if (visualContainer) visualContainer.localRotation = Quaternion.identity;
+            if (visualContainer) 
+            {
+                visualContainer.localRotation = Quaternion.identity;
+                visualContainer.localPosition = Vector3.zero;
+            }
             
             if (exhaustVFX != null && !exhaustVFX.isPlaying) exhaustVFX.Play();
             SetSkidMarksEmitting(true);
@@ -119,8 +147,11 @@ namespace BusMovement
                 SetSkidMarksEmitting(false);
 
                 // Khựng xe tạo cảm giác phanh
-                PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad)
-                     .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce));
+                brakeSequence.Stop();
+                brakeSequence = PrimeTween.Sequence.Create()
+                    .Chain(PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(6f, 0, 0), 0.15f, PrimeTween.Ease.OutQuad))
+                    .Chain(PrimeTween.Tween.LocalRotation(visualContainer, Vector3.zero, 0.25f, PrimeTween.Ease.OutBounce))
+                    .OnComplete(() => StartVibration());
             });
         }
         
