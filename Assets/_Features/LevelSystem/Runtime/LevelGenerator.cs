@@ -172,33 +172,35 @@ namespace BusAway.Gameplay
 
                             if (cell == RoadCellType.HalfT_BusStop_N_Left) 
                             { 
-                                rightPos = new Vector3(offsetX - (x + 1) * tSize, 0, offsetZ - y * tSize); 
-                                branchOffsetWorld = new Vector3(-tSize, 0, 0);
+                                rightPos = new Vector3(offsetX - (x + 1) * tSize, 0, offsetZ - y * tSize); // Right is x+1
+                                branchOffsetWorld = new Vector3(0, 0, -tSize); // Branch y+1 (World -Z)
                             }
                             else if (cell == RoadCellType.HalfT_BusStop_E_Left)
                             {
-                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y - 1) * tSize);
-                                branchOffsetWorld = new Vector3(tSize, 0, 0);
+                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y - 1) * tSize); // Right is y-1
+                                branchOffsetWorld = new Vector3(-tSize, 0, 0); // Branch x+1 (World -X)
                             }
                             else if (cell == RoadCellType.HalfT_BusStop_W_Left)
                             {
-                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y + 1) * tSize);
-                                branchOffsetWorld = new Vector3(0, 0, -tSize);
+                                rightPos = new Vector3(offsetX - x * tSize, 0, offsetZ - (y + 1) * tSize); // Right is y+1
+                                branchOffsetWorld = new Vector3(tSize, 0, 0); // Branch x-1 (World +X)
                             }
                             else if (cell == RoadCellType.HalfT_BusStop_S_Left)
                             {
-                                rightPos = new Vector3(offsetX - (x - 1) * tSize, 0, offsetZ - y * tSize);
-                                branchOffsetWorld = new Vector3(0, 0, tSize);
+                                rightPos = new Vector3(offsetX - (x - 1) * tSize, 0, offsetZ - y * tSize); // Right is x-1
+                                branchOffsetWorld = new Vector3(0, 0, tSize); // Branch y-1 (World +Z)
                             }
 
                             Vector3 centerPos = (pos + rightPos) / 2f;
                             propObj.transform.position = centerPos + branchOffsetWorld;
+                            
+                            // Revert to user's native rotation
                             propObj.transform.rotation = busStopPropTemplate.transform.rotation;
                             
                             // Scale x2 as requested
                             propObj.transform.localScale = busStopPropTemplate.transform.localScale * 2f;
 
-                            // Để yên rotation nguyên bản của prefab
+                            // Đặt tên
                             propObj.name = $"BusStop_Prop_{x}_{y}";
                         }
                     }

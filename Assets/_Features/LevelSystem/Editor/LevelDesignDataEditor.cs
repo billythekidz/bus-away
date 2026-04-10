@@ -244,6 +244,39 @@ namespace BusAway.LevelEditor
                     data.grid[index] = newType;
                 }
             }
+
+            // Pass 2: Overwrite the explicitly adjacent bus stop branches that generated fake corners.
+            // By enforcing their connectivity direction, they will properly render as DeadEnds.
+            for (int y = 0; y < data.gridHeight; y++)
+            {
+                for (int x = 0; x < data.gridWidth; x++)
+                {
+                    RoadCellType cell = data.grid[y * data.gridWidth + x];
+                    if (cell >= RoadCellType.HalfT_BusStop_N_Left && cell <= RoadCellType.HalfT_BusStop_W_Right)
+                    {
+                        if (cell == RoadCellType.HalfT_BusStop_N_Left || cell == RoadCellType.HalfT_BusStop_N_Right)
+                        {
+                            if (y + 1 < data.gridHeight && data.grid[(y + 1) * data.gridWidth + x] != RoadCellType.Empty) 
+                                data.grid[(y + 1) * data.gridWidth + x] = RoadCellType.DeadEnd_N;
+                        }
+                        else if (cell == RoadCellType.HalfT_BusStop_E_Left || cell == RoadCellType.HalfT_BusStop_E_Right)
+                        {
+                            if (x + 1 < data.gridWidth && data.grid[y * data.gridWidth + (x + 1)] != RoadCellType.Empty) 
+                                data.grid[y * data.gridWidth + (x + 1)] = RoadCellType.DeadEnd_E;
+                        }
+                        else if (cell == RoadCellType.HalfT_BusStop_S_Left || cell == RoadCellType.HalfT_BusStop_S_Right)
+                        {
+                            if (y - 1 >= 0 && data.grid[(y - 1) * data.gridWidth + x] != RoadCellType.Empty) 
+                                data.grid[(y - 1) * data.gridWidth + x] = RoadCellType.DeadEnd_S;
+                        }
+                        else if (cell == RoadCellType.HalfT_BusStop_W_Left || cell == RoadCellType.HalfT_BusStop_W_Right)
+                        {
+                            if (x - 1 >= 0 && data.grid[y * data.gridWidth + (x - 1)] != RoadCellType.Empty) 
+                                data.grid[y * data.gridWidth + (x - 1)] = RoadCellType.DeadEnd_W;
+                        }
+                    }
+                }
+            }
         }
 
         private void GenerateRandomGrid(LevelDesignData data, int complexity)
@@ -293,7 +326,7 @@ namespace BusAway.LevelEditor
                         if (data.GetCell(x, y + 1) == RoadCellType.Empty && data.GetCell(x, y - 1) == RoadCellType.Empty && 
                             data.GetCell(x + 1, y + 1) == RoadCellType.Empty && data.GetCell(x + 1, y - 1) == RoadCellType.Empty)
                         {
-                            int dir = Random.value > 0.5f ? 1 : -1;
+                            int dir = (side == 0) ? -1 : 1;
                             int ty = y + dir;
                             if (ty >= 0 && ty < data.gridHeight)
                             {
@@ -317,7 +350,7 @@ namespace BusAway.LevelEditor
                         if (data.GetCell(x + 1, y) == RoadCellType.Empty && data.GetCell(x - 1, y) == RoadCellType.Empty && 
                             data.GetCell(x + 1, y + 1) == RoadCellType.Empty && data.GetCell(x - 1, y + 1) == RoadCellType.Empty)
                         {
-                            int dir = Random.value > 0.5f ? 1 : -1;
+                            int dir = (side == 2) ? -1 : 1;
                             int tx = x + dir;
                             if (tx >= 0 && tx < data.gridWidth)
                             {
