@@ -15,14 +15,14 @@ namespace BusAway.Level
         Corner_SE = 5,          // Góc cua Nam-Đông: Nối đường từ phía Nam (dưới) sang phía Đông (phải)
         Corner_SW = 6,          // Góc cua Nam-Tây: Nối đường từ phía Nam (dưới) sang phía Tây (trái)
 
-        HalfT_N_Left = 11,      // Nửa trái của nút giao T hướng Bắc (cổng bus phía Bắc)
-        HalfT_N_Right = 12,     // Nửa phải của nút giao T hướng Bắc
-        HalfT_E_Left = 13,      // Nửa trái của nút giao T hướng Đông
-        HalfT_E_Right = 14,     // Nửa phải của nút giao T hướng Đông
-        HalfT_S_Left = 15,      // Nửa trái của nút giao T hướng Nam
-        HalfT_S_Right = 16,     // Nửa phải của nút giao T hướng Nam
-        HalfT_W_Left = 17,      // Nửa trái của nút giao T hướng Tây
-        HalfT_W_Right = 18,     // Nửa phải của nút giao T hướng Tây
+        HalfT_BusStop_N_Left = 11,      // Nửa trái của trạm Bus (nút giao T) hướng Bắc (chuồng đỗ mở ra hướng Nam)
+        HalfT_BusStop_N_Right = 12,     // Nửa phải của trạm Bus (nút giao T) hướng Bắc
+        HalfT_BusStop_E_Left = 13,      // Nửa trái của trạm Bus hướng Đông
+        HalfT_BusStop_E_Right = 14,     // Nửa phải của trạm Bus hướng Đông
+        HalfT_BusStop_S_Left = 15,      // Nửa trái của trạm Bus hướng Nam
+        HalfT_BusStop_S_Right = 16,     // Nửa phải của trạm Bus hướng Nam
+        HalfT_BusStop_W_Left = 17,      // Nửa trái của trạm Bus hướng Tây
+        HalfT_BusStop_W_Right = 18,     // Nửa phải của trạm Bus hướng Tây
         
         Cross = 19,             // Ngã tư đầy đủ: 4 nhánh thông nhau (Bắc, Nam, Đông, Tây)
 
@@ -31,19 +31,7 @@ namespace BusAway.Level
         DeadEnd_S = 22,         // Tuyến đường đâm về hướng Nam. Phần ngõ cụt (bị bịt) nằm ở viền Nam, cổng kết nối mở ra hướng Bắc.
         DeadEnd_W = 23,         // Tuyến đường đâm về hướng Tây. Phần ngõ cụt (bị bịt) nằm ở viền Tây, cổng kết nối mở ra hướng Đông.
 
-        // Trạm xe buýt / Gara đỗ xe: mỗi trạm chiếm 2 ô liên tiếp (Phần 1 + Phần 2).
-        // Index đặt theo cặp liền kề theo từng hướng xoay để dễ mapping và lập trình.
-        BusStop_1_N = 31,       // Phần đầu trạm, hướng Bắc (mở cửa về phía Bắc). Đặt ô này trước, ô BusStop_2_N kế tiếp theo sau
-        BusStop_2_N = 32,       // Phần đuôi trạm, hướng Bắc. Luôn đặt ngay sau BusStop_1_N theo hướng Bắc
-
-        BusStop_1_E = 33,       // Phần đầu trạm, hướng Đông (mở cửa về phía Đông)
-        BusStop_2_E = 34,       // Phần đuôi trạm, hướng Đông. Luôn đặt ngay sau BusStop_1_E theo hướng Đông
-
-        BusStop_1_S = 35,       // Phần đầu trạm, hướng Nam (mở cửa về phía Nam)
-        BusStop_2_S = 36,       // Phần đuôi trạm, hướng Nam. Luôn đặt ngay sau BusStop_1_S theo hướng Nam
-
-        BusStop_1_W = 37,       // Phần đầu trạm, hướng Tây (mở cửa về phía Tây)
-        BusStop_2_W = 38,       // Phần đuôi trạm, hướng Tây. Luôn đặt ngay sau BusStop_1_W theo hướng Tây
+        // (Loại bỏ các độc lập BusStop vì theo rule mới, ngã ba chữ T chính là trạm xe buýt)
 
         // Các type tổng quát, dùng khi chưa xác định loại cụ thể hoặc để test nhanh
         GenericRoad = 99,       // Đường generic, chưa phân loại hướng. Dùng tạm trong quá trình thiết kế

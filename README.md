@@ -19,6 +19,10 @@ A polished, playable puzzle prototype inspired by [Buses Away](https://apps.appl
 
 ---
 
+## 📐 Game Design Rules
+
+- **The T-Junction Bus Stop Rule**: Trong trò chơi, mọi ngã ba (T-Junction) đều là một trạm xe buýt. Phần cổng mở rộng (stem) của ngã ba T chính là bãi đỗ/chuồng để xếp xe. Không có ngã ba nào chỉ đơn thuần là đường đi ngang qua. Do đó, các Block `HalfT` đã được quy chiếu để gánh vác cả vai trò tạo khúc cua chữ T lẫn vai trò là điểm Park xe chờ (Bus Stop).
+
 ## 🗂️ Project Structure (Feature-Based Architecture)
 
 We strictly use a **Feature-Based (Modular) Architecture** to ensure the project scales cleanly without creating "spaghetti code" or massive unwieldy folders.

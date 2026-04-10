@@ -48,7 +48,7 @@ namespace BusAway.LevelEditor
                         string label = ".";
                         Color btnColor = Color.white;
 
-                        bool isBusStop = cell >= RoadCellType.BusStop_1_N && cell <= RoadCellType.BusStop_2_W;
+                        bool isBusStop = cell >= RoadCellType.HalfT_BusStop_N_Left && cell <= RoadCellType.HalfT_BusStop_W_Right;
 
                         if (isBusStop)
                         {
@@ -66,8 +66,6 @@ namespace BusAway.LevelEditor
                         {
                             if (cell == RoadCellType.Empty)
                                 data.grid[index] = RoadCellType.GenericRoad;
-                            else if (!isBusStop)
-                                data.grid[index] = RoadCellType.BusStop_1_N;
                             else
                                 data.grid[index] = RoadCellType.Empty;
 
@@ -206,9 +204,9 @@ namespace BusAway.LevelEditor
                 {
                     int index = y * data.gridWidth + x;
                     RoadCellType current = data.grid[index];
-
-                    bool isBusStop = current >= RoadCellType.BusStop_1_N && current <= RoadCellType.BusStop_2_W;
-                    if (current == RoadCellType.Empty || isBusStop) continue;
+                    // Chú ý: Vì BusStop hiện tại chính là HalfT, và HalfT được gen tự động từ T-Junction.
+                    // Chúng ta không skip tự động tính toán cho BusStop nữa.
+                    if (current == RoadCellType.Empty) continue;
 
                     bool n = HasRoad(x, y + 1);
                     bool e = HasRoad(x + 1, y);
@@ -235,10 +233,10 @@ namespace BusAway.LevelEditor
                         case 12: newType = RoadCellType.Corner_SW; break;
                         case 9: newType = RoadCellType.Corner_NW; break;
                         
-                        case 11: newType = (CountConsecutiveMask(data, x, y, -1, 0, 11) % 2 == 0) ? RoadCellType.HalfT_N_Left : RoadCellType.HalfT_N_Right; break;
-                        case 7: newType = (CountConsecutiveMask(data, x, y, 0, -1, 7) % 2 == 0) ? RoadCellType.HalfT_E_Right : RoadCellType.HalfT_E_Left; break;
-                        case 14: newType = (CountConsecutiveMask(data, x, y, -1, 0, 14) % 2 == 0) ? RoadCellType.HalfT_S_Right : RoadCellType.HalfT_S_Left; break;
-                        case 13: newType = (CountConsecutiveMask(data, x, y, 0, -1, 13) % 2 == 0) ? RoadCellType.HalfT_W_Left : RoadCellType.HalfT_W_Right; break;
+                        case 11: newType = (CountConsecutiveMask(data, x, y, -1, 0, 11) % 2 == 0) ? RoadCellType.HalfT_BusStop_N_Left : RoadCellType.HalfT_BusStop_N_Right; break;
+                        case 7: newType = (CountConsecutiveMask(data, x, y, 0, -1, 7) % 2 == 0) ? RoadCellType.HalfT_BusStop_E_Right : RoadCellType.HalfT_BusStop_E_Left; break;
+                        case 14: newType = (CountConsecutiveMask(data, x, y, -1, 0, 14) % 2 == 0) ? RoadCellType.HalfT_BusStop_S_Right : RoadCellType.HalfT_BusStop_S_Left; break;
+                        case 13: newType = (CountConsecutiveMask(data, x, y, 0, -1, 13) % 2 == 0) ? RoadCellType.HalfT_BusStop_W_Left : RoadCellType.HalfT_BusStop_W_Right; break;
                         
                         case 15: newType = RoadCellType.Cross; break;
                     }
@@ -289,9 +287,12 @@ namespace BusAway.LevelEditor
                     bool e = data.GetCell(x + 1, y) != RoadCellType.Empty;
                     bool w = data.GetCell(x - 1, y) != RoadCellType.Empty;
 
+                    // Theo quy tắc mới, T-junction = BusStop.
+                    // Random generation hiện tại tạo vòng (ring) và BSP, chưa có nhánh cụt T-junction một chiều.
+                    // (Chúng ta có thể thêm logic tạo nhánh T sau, hiện tại để trống đoạn này hoặc nối ra 1 ô).
                     if ((n && s && !e && !w) || (e && w && !n && !s))
                     {
-                        data.grid[idx] = RoadCellType.BusStop_1_N;
+                        // TODO: Tạo T-junction ở đây bằng cách mọc ra 1 GenericRoad vuông góc
                         numBusStops--;
                     }
                 }
