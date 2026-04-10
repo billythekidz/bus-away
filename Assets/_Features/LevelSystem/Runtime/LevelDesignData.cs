@@ -10,27 +10,26 @@ namespace BusAway.Level
         Straight_NS = 1,        // Đường thẳng dọc (Bắc-Nam), xe di chuyển theo trục Z
         Straight_EW = 2,        // Đường thẳng ngang (Đông-Tây), xe di chuyển theo trục X
 
-        Corner_NE = 3,          // Góc cua Bắc-Đông: đường rẽ từ hướng Nam lên rồi sang Đông (phải)
-        Corner_NW = 4,          // Góc cua Bắc-Tây: đường rẽ từ hướng Nam lên rồi sang Tây (trái)
-        Corner_SE = 5,          // Góc cua Nam-Đông: đường rẽ từ hướng Bắc xuống rồi sang Đông (phải)
-        Corner_SW = 6,          // Góc cua Nam-Tây: đường rẽ từ hướng Bắc xuống rồi sang Tây (trái)
+        Corner_NE = 3,          // Góc cua Bắc-Đông: Nối đường từ phía Bắc (trên) sang phía Đông (phải)
+        Corner_NW = 4,          // Góc cua Bắc-Tây: Nối đường từ phía Bắc (trên) sang phía Tây (trái)
+        Corner_SE = 5,          // Góc cua Nam-Đông: Nối đường từ phía Nam (dưới) sang phía Đông (phải)
+        Corner_SW = 6,          // Góc cua Nam-Tây: Nối đường từ phía Nam (dưới) sang phía Tây (trái)
 
-        InnerCorner_NE = 7,     // Góc trong Bắc-Đông: phần bo góc viền nội tuyến hướng NE (dùng cho đường vòng)
-        InnerCorner_NW = 8,     // Góc trong Bắc-Tây: phần bo góc viền nội tuyến hướng NW
-        InnerCorner_SE = 9,     // Góc trong Nam-Đông: phần bo góc viền nội tuyến hướng SE
-        InnerCorner_SW = 10,    // Góc trong Nam-Tây: phần bo góc viền nội tuyến hướng SW
+        HalfT_N_Left = 11,      // Nửa trái của nút giao T hướng Bắc (cổng bus phía Bắc)
+        HalfT_N_Right = 12,     // Nửa phải của nút giao T hướng Bắc
+        HalfT_E_Left = 13,      // Nửa trái của nút giao T hướng Đông
+        HalfT_E_Right = 14,     // Nửa phải của nút giao T hướng Đông
+        HalfT_S_Left = 15,      // Nửa trái của nút giao T hướng Nam
+        HalfT_S_Right = 16,     // Nửa phải của nút giao T hướng Nam
+        HalfT_W_Left = 17,      // Nửa trái của nút giao T hướng Tây
+        HalfT_W_Right = 18,     // Nửa phải của nút giao T hướng Tây
+        
+        Cross = 19,             // Ngã tư đầy đủ: 4 nhánh thông nhau (Bắc, Nam, Đông, Tây)
 
-        TJunction_N = 11,       // Ngã ba hướng Bắc: 3 nhánh (Đông, Tây, Bắc), chặn hướng Nam
-        TJunction_E = 12,       // Ngã ba hướng Đông: 3 nhánh (Bắc, Nam, Đông), chặn hướng Tây
-        TJunction_S = 13,       // Ngã ba hướng Nam: 3 nhánh (Đông, Tây, Nam), chặn hướng Bắc
-        TJunction_W = 14,       // Ngã ba hướng Tây: 3 nhánh (Bắc, Nam, Tây), chặn hướng Đông
-
-        Cross = 15,             // Ngã tư đầy đủ: 4 nhánh thông nhau (Bắc, Nam, Đông, Tây)
-
-        DeadEnd_N = 16,         // Đường cụt hướng Bắc: chỉ có 1 lối vào từ phía Nam, đầu kia bịt kín
-        DeadEnd_E = 17,         // Đường cụt hướng Đông: chỉ có 1 lối vào từ phía Tây
-        DeadEnd_S = 18,         // Đường cụt hướng Nam: chỉ có 1 lối vào từ phía Bắc
-        DeadEnd_W = 19,         // Đường cụt hướng Tây: chỉ có 1 lối vào từ phía Đông
+        DeadEnd_N = 20,         // Đường cụt hướng Bắc: chỉ có 1 lối vào từ phía Nam, đầu kia bịt kín
+        DeadEnd_E = 21,         // Đường cụt hướng Đông: chỉ có 1 lối vào từ phía Tây
+        DeadEnd_S = 22,         // Đường cụt hướng Nam: chỉ có 1 lối vào từ phía Bắc
+        DeadEnd_W = 23,         // Đường cụt hướng Tây: chỉ có 1 lối vào từ phía Đông
 
         // Trạm xe buýt / Gara đỗ xe: mỗi trạm chiếm 2 ô liên tiếp (Phần 1 + Phần 2).
         // Index đặt theo cặp liền kề theo từng hướng xoay để dễ mapping và lập trình.

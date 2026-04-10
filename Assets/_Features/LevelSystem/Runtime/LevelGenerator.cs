@@ -23,17 +23,9 @@ namespace BusAway.Gameplay
         public GameObject cornerNW;
         public GameObject cornerSW;
 
-        [Header("Inner Corners")]
-        public GameObject innerCornerSE;
-        public GameObject innerCornerNE;
-        public GameObject innerCornerNW;
-        public GameObject innerCornerSW;
-
-        [Header("T-Junctions")]
-        public GameObject tJunctionE;
-        public GameObject tJunctionS;
-        public GameObject tJunctionW;
-        public GameObject tJunctionN;
+        [Header("Half T-Junctions")]
+        public GameObject halfTLeft;
+        public GameObject halfTRight;
 
         [Header("Cross, Generic")]
         public GameObject crossRoad;
@@ -121,15 +113,14 @@ namespace BusAway.Gameplay
                         case RoadCellType.Corner_NW: prefabTemplate = cornerNW; rotYFallback = camFlip + 180f; shapeTypeStr = "Corner"; break;
                         case RoadCellType.Corner_SW: prefabTemplate = cornerSW; rotYFallback = camFlip + 90f;  shapeTypeStr = "Corner"; break;
 
-                        case RoadCellType.InnerCorner_SE: prefabTemplate = innerCornerSE; rotYFallback = camFlip + 0f;   shapeTypeStr = "InnerCorner"; break;
-                        case RoadCellType.InnerCorner_NE: prefabTemplate = innerCornerNE; rotYFallback = camFlip - 90f;  shapeTypeStr = "InnerCorner"; break;
-                        case RoadCellType.InnerCorner_NW: prefabTemplate = innerCornerNW; rotYFallback = camFlip + 180f; shapeTypeStr = "InnerCorner"; break;
-                        case RoadCellType.InnerCorner_SW: prefabTemplate = innerCornerSW; rotYFallback = camFlip + 90f;  shapeTypeStr = "InnerCorner"; break;
-
-                        case RoadCellType.TJunction_E: prefabTemplate = tJunctionE; rotYFallback = camFlip + 0f;   shapeTypeStr = "TJunction"; break;
-                        case RoadCellType.TJunction_S: prefabTemplate = tJunctionS; rotYFallback = camFlip + 90f;  shapeTypeStr = "TJunction"; break;
-                        case RoadCellType.TJunction_W: prefabTemplate = tJunctionW; rotYFallback = camFlip + 180f; shapeTypeStr = "TJunction"; break;
-                        case RoadCellType.TJunction_N: prefabTemplate = tJunctionN; rotYFallback = camFlip - 90f;  shapeTypeStr = "TJunction"; break;
+                        case RoadCellType.HalfT_N_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_N_Right: prefabTemplate = halfTRight; rotYFallback = camFlip + 0f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_E_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_E_Right: prefabTemplate = halfTRight; rotYFallback = camFlip + 90f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_S_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip + 180f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_S_Right: prefabTemplate = halfTRight; rotYFallback = camFlip + 180f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_W_Left: prefabTemplate = halfTLeft; rotYFallback = camFlip - 90f; shapeTypeStr = "HalfT"; break;
+                        case RoadCellType.HalfT_W_Right: prefabTemplate = halfTRight; rotYFallback = camFlip - 90f; shapeTypeStr = "HalfT"; break;
 
                         case RoadCellType.Cross: prefabTemplate = crossRoad; rotYFallback = camFlip; shapeTypeStr = "Cross"; break;
 
@@ -210,7 +201,7 @@ namespace BusAway.Gameplay
                             a2.transform.localScale = new Vector3(tSize/2f + 0.01f, 0.11f, asphaltWidth);
                             asphalts = new Renderer[] { a1.GetComponent<Renderer>(), a2.GetComponent<Renderer>() };
                         }
-                        else if (shapeTypeStr == "TJunction")
+                        else if (shapeTypeStr == "HalfT")
                         {
                             GameObject a1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
                             a1.transform.SetParent(tileObj.transform, false);

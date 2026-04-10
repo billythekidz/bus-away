@@ -105,6 +105,33 @@ namespace BusAway.LevelEditor
             }
         }
 
+        private int CountConsecutiveMask(LevelDesignData data, int startX, int startY, int dx, int dy, int expectedMask)
+        {
+            int count = 0;
+            int x = startX + dx;
+            int y = startY + dy;
+            
+            System.Func<int, int, bool> HasRoad = (cx, cy) => {
+                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                return data.grid[cy * data.gridWidth + cx] != RoadCellType.Empty; /* treating busstop same as empty for masking is intended below */
+            };
+
+            while (x >= 0 && x < data.gridWidth && y >= 0 && y < data.gridHeight)
+            {
+                bool n = HasRoad(x, y + 1);
+                bool e = HasRoad(x + 1, y);
+                bool s = HasRoad(x, y - 1);
+                bool w = HasRoad(x - 1, y);
+                int m = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
+                if (m == expectedMask) count++;
+                else break;
+                
+                x += dx;
+                y += dy;
+            }
+            return count;
+        }
+
         private void UpdateAllRoadTypes(LevelDesignData data)
         {
             System.Func<int, int, bool> HasRoad = (cx, cy) => {
@@ -127,12 +154,6 @@ namespace BusAway.LevelEditor
                     bool s = HasRoad(x, y - 1);
                     bool w = HasRoad(x - 1, y);
 
-                    // Diagonals for inner corners
-                    bool ne = HasRoad(x + 1, y + 1);
-                    bool se = HasRoad(x + 1, y - 1);
-                    bool sw = HasRoad(x - 1, y - 1);
-                    bool nw = HasRoad(x - 1, y + 1);
-
                     int mask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
 
                     RoadCellType newType = RoadCellType.GenericRoad;
@@ -148,15 +169,15 @@ namespace BusAway.LevelEditor
                         case 5:  newType = RoadCellType.Straight_NS; break;
                         case 10: newType = RoadCellType.Straight_EW; break;
                         
-                        case 3: newType = ne ? RoadCellType.InnerCorner_NE : RoadCellType.Corner_NE; break;
-                        case 6: newType = se ? RoadCellType.InnerCorner_SE : RoadCellType.Corner_SE; break;
-                        case 12: newType = sw ? RoadCellType.InnerCorner_SW : RoadCellType.Corner_SW; break;
-                        case 9: newType = nw ? RoadCellType.InnerCorner_NW : RoadCellType.Corner_NW; break;
+                        case 3: newType = RoadCellType.Corner_NE; break;
+                        case 6: newType = RoadCellType.Corner_SE; break;
+                        case 12: newType = RoadCellType.Corner_SW; break;
+                        case 9: newType = RoadCellType.Corner_NW; break;
                         
-                        case 11: newType = RoadCellType.TJunction_N; break;
-                        case 7: newType = RoadCellType.TJunction_E; break;
-                        case 14: newType = RoadCellType.TJunction_S; break;
-                        case 13: newType = RoadCellType.TJunction_W; break;
+                        case 11: newType = (CountConsecutiveMask(data, x, y, -1, 0, 11) % 2 == 0) ? RoadCellType.HalfT_N_Left : RoadCellType.HalfT_N_Right; break;
+                        case 7: newType = (CountConsecutiveMask(data, x, y, 0, -1, 7) % 2 == 0) ? RoadCellType.HalfT_E_Right : RoadCellType.HalfT_E_Left; break;
+                        case 14: newType = (CountConsecutiveMask(data, x, y, -1, 0, 14) % 2 == 0) ? RoadCellType.HalfT_S_Right : RoadCellType.HalfT_S_Left; break;
+                        case 13: newType = (CountConsecutiveMask(data, x, y, 0, -1, 13) % 2 == 0) ? RoadCellType.HalfT_W_Left : RoadCellType.HalfT_W_Right; break;
                         
                         case 15: newType = RoadCellType.Cross; break;
                     }
@@ -274,15 +295,14 @@ namespace BusAway.LevelEditor
                 case RoadCellType.Corner_NE: return "╚";
                 case RoadCellType.Corner_NW: return "╝";
                 
-                case RoadCellType.InnerCorner_SE: return "╝";
-                case RoadCellType.InnerCorner_SW: return "╚";
-                case RoadCellType.InnerCorner_NE: return "╗";
-                case RoadCellType.InnerCorner_NW: return "╔";
-                
-                case RoadCellType.TJunction_E: return "╠";
-                case RoadCellType.TJunction_W: return "╣";
-                case RoadCellType.TJunction_S: return "╦";
-                case RoadCellType.TJunction_N: return "╩";
+                case RoadCellType.HalfT_E_Left: return "T_EL"; // ╠
+                case RoadCellType.HalfT_E_Right: return "T_ER"; // ╠
+                case RoadCellType.HalfT_W_Left: return "T_WL"; // ╣
+                case RoadCellType.HalfT_W_Right: return "T_WR"; // ╣
+                case RoadCellType.HalfT_S_Left: return "T_SL"; // ╦
+                case RoadCellType.HalfT_S_Right: return "T_SR"; // ╦
+                case RoadCellType.HalfT_N_Left: return "T_NL"; // ╩
+                case RoadCellType.HalfT_N_Right: return "T_NR"; // ╩
                 
                 case RoadCellType.Cross: return "╬";
                 
