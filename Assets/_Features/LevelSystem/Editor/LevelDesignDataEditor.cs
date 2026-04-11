@@ -135,14 +135,24 @@ namespace BusAway.LevelEditor
             {
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("Preview: Resolved Lands (last build)", EditorStyles.miniLabel);
+
                 int total = 0;
-                foreach (var land in data.resolvedLands)
+                for (int i = 0; i < data.resolvedLands.Count; i++)
                 {
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.ColorField(GUIContent.none, land.color, false, false, false, GUILayout.Width(40));
-                    EditorGUILayout.LabelField($"{land.agentCount} agents ({land.agentCount/4} rows)");
-                    total += land.agentCount;
-                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.LabelField($"Land {i}:", EditorStyles.boldLabel);
+                    var group = data.resolvedLands[i];
+                    foreach (var land in group.chunks)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        
+                        GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
+                        Rect r = EditorGUILayout.GetControlRect(false, 20f, GUILayout.Width(40));
+                        EditorGUI.DrawRect(r, land.color);
+                        
+                        EditorGUILayout.LabelField($"{land.agentCount} agents ({land.agentCount / 4} rows)");
+                        total += land.agentCount;
+                        EditorGUILayout.EndHorizontal();
+                    }
                 }
                 EditorGUILayout.LabelField($"Total: {total} agents", EditorStyles.boldLabel);
             }

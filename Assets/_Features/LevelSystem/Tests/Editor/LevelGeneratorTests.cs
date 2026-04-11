@@ -21,6 +21,9 @@ namespace BusAway.Tests.Editor
 
             var data = ScriptableObject.CreateInstance<LevelDesignData>();
             data.landCount = 3;
+            data.busStopLength = 2;
+            data.busesPerStop = 2;
+            data.agentsPerBus = 32;
             data.landColorPalette = new List<Color> { Color.red, Color.green, Color.blue, Color.yellow, Color.white };
             gen.activeLevelData = data;
 
@@ -30,10 +33,18 @@ namespace BusAway.Tests.Editor
             int landsCount = data.resolvedLands.Count;
             Assert.AreEqual(3, landsCount, "Land count should exactly match LevelDesignData.landCount.");
 
-            foreach (var land in data.resolvedLands)
+            int expectedTotalPerColor = data.busStopLength * data.busesPerStop * data.agentsPerBus;
+            int expectedTotalAll = expectedTotalPerColor * data.landColorPalette.Count;
+            int actualTotal = 0;
+
+            foreach (var group in data.resolvedLands)
             {
-                Assert.AreEqual(20, land.agentCount, "Agent count should be exactly rowsPerLand * 4.");
+                foreach (var chunk in group.chunks)
+                {
+                    actualTotal += chunk.agentCount;
+                }
             }
+            Assert.AreEqual(expectedTotalAll, actualTotal, "Total agents across all lands must match the bus formulas.");
 
             Object.DestroyImmediate(genGo);
             Object.DestroyImmediate(crowdGo);

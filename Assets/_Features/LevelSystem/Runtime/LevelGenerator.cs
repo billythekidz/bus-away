@@ -359,25 +359,43 @@ namespace BusAway.Gameplay
             ShuffleList(palette);
 
             activeLevelData.resolvedLands.Clear();
+            for (int i = 0; i < landCount; i++) activeLevelData.resolvedLands.Add(new CrowdLandGroup());
 
+            int totalAgentsPerColor = activeLevelData.busStopLength * activeLevelData.busesPerStop * activeLevelData.agentsPerBus;
+            var allChunks = new System.Collections.Generic.List<CrowdLandConfig>();
             int totalAgents = 0;
-            for (int i = 0; i < landCount; i++)
+
+            foreach (var color in palette)
             {
-                int rows = 6;
-                var crowdManager = FindObjectOfType<BusAway.CrowdSystem.CrowdManager>();
-                if (crowdManager != null) rows = crowdManager.rowsPerLand;
-
-                int count = rows * 4;
-
-                var landCfg = new CrowdLandConfig
+                int remaining = totalAgentsPerColor;
+                while (remaining > 0)
                 {
-                    agentCount = count,
-                    color = (i < palette.Count) ? palette[i] : Color.white
-                };
-                activeLevelData.resolvedLands.Add(landCfg);
-                totalAgents += count;
+                    int minChunk = activeLevelData.minChunkSize;
+                    int maxChunk = Mathf.Min(activeLevelData.maxChunkSize, remaining);
+                    if (maxChunk < minChunk) minChunk = maxChunk;
 
+                    var validChoices = new System.Collections.Generic.List<int>();
+                    for (int c = minChunk; c <= maxChunk; c += 4)
+                    {
+                        int remAfter = remaining - c;
+                        if (remAfter == 0 || remAfter >= activeLevelData.minChunkSize) validChoices.Add(c);
+                    }
+                    
+                    int chosenChunk = remaining;
+                    if (validChoices.Count > 0) chosenChunk = validChoices[Random.Range(0, validChoices.Count)];
+                    
+                    allChunks.Add(new CrowdLandConfig { agentCount = chosenChunk, color = color });
+                    remaining -= chosenChunk;
+                    totalAgents += chosenChunk;
+                }
+            }
 
+            ShuffleList(allChunks);
+
+            for (int i = 0; i < allChunks.Count; i++)
+            {
+                int landDst = i % landCount;
+                activeLevelData.resolvedLands[landDst].chunks.Add(allChunks[i]);
             }
 
 #if UNITY_EDITOR

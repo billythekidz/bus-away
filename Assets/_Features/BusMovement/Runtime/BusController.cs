@@ -37,6 +37,10 @@ namespace BusMovement
         public Vector2Int currentGridPos;
         [HideInInspector]
         public Vector2Int previousGridPos;
+        [HideInInspector]
+        public Vector2Int targetGridPos;
+        [HideInInspector]
+        public bool isMoving;
 
         private PrimeTween.Sequence moveSequence;
         private PrimeTween.Sequence brakeSequence;
@@ -113,6 +117,8 @@ namespace BusMovement
         {
             if (pathPoints == null || pathPoints.Count == 0) return;
 
+            isMoving = true;
+
             moveSequence.Stop();
             wobbleTween.Stop();
             brakeSequence.Stop();
@@ -173,6 +179,7 @@ namespace BusMovement
             // On Complete handling
             moveSequence.OnComplete(() =>
             {
+                isMoving = false;
                 if (isFinalStop)
                 {
                     wobbleTween.Stop();

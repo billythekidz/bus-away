@@ -201,7 +201,7 @@ namespace BusAway.CrowdSystem
         /// <summary>
         /// Spawns a batch of agents for one "land" column.
         /// </summary>
-        public void SpawnLand(int landIndex, int agentCount, Color color, int totalLands = 1)
+        public void SpawnLand(int landIndex, int agentCount, Color color, int totalLands = 1, int startRow = 0)
         {
             Debug.Assert(agentCount % 4 == 0, $"SpawnLand: agentCount must be multiple of 4, got {agentCount}");
 
@@ -217,7 +217,7 @@ namespace BusAway.CrowdSystem
 
             for (int i = 0; i < agentCount; i++)
             {
-                int row = i / 4;
+                int row = startRow + (i / 4);
                 int col = i % 4;
                 
                 // Agents clustered around landCenter.x
@@ -230,7 +230,9 @@ namespace BusAway.CrowdSystem
                 // frontZ là ở trên cùng, nên row càng lớn thì Z càng phải LÙI LẠI (trừ đi)
                 Vector3 pos = targetPos - new Vector3(0, 0, row * agentSpacingZ);
 
-                SpawnCharacter(pos, targetPos, color);
+                // Target should be their initial position so they stay still at spawn
+                // Moving forward is handled later by DispatchGroupToWaitZone
+                SpawnCharacter(pos, pos, color);
             }
 
             // Spawn roads under the land

@@ -121,6 +121,11 @@ namespace BusAway.Level
         public int agentsPerBus = 32;
 
         [Header("Crowd Lands")]
+        [Tooltip("Minimum number of agents grouped together for one color in a land block. Must be a multiple of 4.")]
+        public int minChunkSize = 8;
+        [Tooltip("Maximum number of agents grouped together for one color in a land block. Must be a multiple of 4.")]
+        public int maxChunkSize = 40;
+
         [HideInInspector]
         public int landCount = 3;
 
