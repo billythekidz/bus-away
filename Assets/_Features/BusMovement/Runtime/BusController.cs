@@ -72,7 +72,7 @@ namespace BusMovement
                 {
                     if (sm != null)
                     {
-                        sm.time *= 0.33f;
+                        sm.time = 0.15f;
                     }
                 }
             }
@@ -148,17 +148,18 @@ namespace BusMovement
             isMoving = true;
 
             moveSequence.Stop();
-            wobbleTween.Stop();
+            // Don't stop wobbleTween if already moving, so it loops smoothly between grid tiles
+            if (!wobbleTween.isAlive)
+            {
+                if (visualContainer)
+                {
+                    visualContainer.localRotation = Quaternion.identity;
+                    visualContainer.localPosition = Vector3.zero;
+                }
+            }
+
             brakeSequence.Stop();
             StopVibration();
-
-
-            if (visualContainer)
-
-            {
-                visualContainer.localRotation = Quaternion.identity;
-                visualContainer.localPosition = Vector3.zero;
-            }
 
 
             if (exhaustVFX != null && !exhaustVFX.isPlaying) exhaustVFX.Play();
@@ -168,12 +169,15 @@ namespace BusMovement
 
 
             Vector3 currentPos = transform.position;
+            Quaternion currentRot = transform.rotation;
+            int validSteps = 0;
 
             foreach (var point in pathPoints)
             {
                 Vector3 targetFlat = new Vector3(point.x, transform.position.y, point.z);
                 float distance = Vector3.Distance(currentPos, targetFlat);
                 if (distance < 0.01f) continue;
+                validSteps++;
 
 
                 float duration = distance / moveSpeed;
@@ -185,8 +189,8 @@ namespace BusMovement
                 Vector3 direction = (targetFlat - currentPos).normalized;
                 if (direction != Vector3.zero)
                 {
-                    Quaternion startRot = transform.rotation;
-                    Quaternion targetRot = Quaternion.LookRotation(direction);
+                    Quaternion segmentStartRot = currentRot;
+                    Quaternion segmentTargetRot = Quaternion.LookRotation(direction);
                     float rotDuration = Mathf.Min(duration, duration * 0.75f); // Soft curve cornering
 
 
@@ -194,15 +198,28 @@ namespace BusMovement
 
                     {
                         if (this != null && transform != null)
-                            transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
+                            transform.rotation = Quaternion.Slerp(segmentStartRot, segmentTargetRot, t);
                     }, ease: PrimeTween.Ease.InOutQuad));
+                    
+                    currentRot = segmentTargetRot;
                 }
 
                 currentPos = targetFlat;
             }
 
-            // Start Wobbling the body (Chòng chành)
-            wobbleTween = PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(0, 0, 3f), 0.2f, PrimeTween.Ease.InOutSine, cycles: -1, cycleMode: PrimeTween.CycleMode.Yoyo);
+            if (validSteps == 0)
+            {
+                isMoving = false;
+                if (isFinalStop) StartVibration();
+                OnPathComplete?.Invoke(this);
+                return;
+            }
+
+            // Start Wobbling the body (Chòng chành) if not already wobbling
+            if (!wobbleTween.isAlive)
+            {
+                wobbleTween = PrimeTween.Tween.LocalRotation(visualContainer, new Vector3(0, 0, 3f), 0.2f, PrimeTween.Ease.InOutSine, cycles: -1, cycleMode: PrimeTween.CycleMode.Yoyo);
+            }
 
             // On Complete handling
             moveSequence.OnComplete(() =>

@@ -5240,9 +5240,11 @@ MonoBehaviour:
   - {fileID: 2610118405778780119}
   - {fileID: 7250009170106880517}
   - {fileID: 7299154988911881269}
-  sparkBlingVFX: {fileID: 7766634603549746963}
+  sparkBlingVFX: {fileID: 5912679221027089336, guid: 113dd7e38c85cdc4bbfd97327683a92e, type: 3}
   currentGridPos: {x: 0, y: 0}
   previousGridPos: {x: 0, y: 0}
+  targetGridPos: {x: 0, y: 0}
+  isMoving: 0
 --- !u!1 &3097153403609129429
 GameObject:
   m_ObjectHideFlags: 0
@@ -10228,11 +10230,6 @@ PrefabInstance:
 --- !u!4 &2212546523992695280 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3331643483377341784, guid: 882be29a57b9d9c4189ba3f5f47beb16, type: 3}
-  m_PrefabInstance: {fileID: 3497303839003882664}
-  m_PrefabAsset: {fileID: 0}
---- !u!198 &7766634603549746963 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 6575337138315416507, guid: 882be29a57b9d9c4189ba3f5f47beb16, type: 3}
   m_PrefabInstance: {fileID: 3497303839003882664}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &5087949593415296267
