@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using BusAway.Level;
+using TMPro;
 using UnityEngine;
 
 namespace BusAway.Gameplay
@@ -37,7 +38,8 @@ namespace BusAway.Gameplay
         private List<BusMovement.BusController> activeBusesWaitingForPlay = new List<BusMovement.BusController>();
 
         // -- Boarding / Loading Zone System --
-        public class BusWaitingGroup {
+        public class BusWaitingGroup
+        {
             public Color color;
             public int agentCount;
             public int landIndex;
@@ -45,11 +47,14 @@ namespace BusAway.Gameplay
         private Queue<BusWaitingGroup> busWaitingQueue = new Queue<BusWaitingGroup>();
         private HashSet<int> tappedLands = new HashSet<int>();
         private Dictionary<int, int> landChunkIndices = new Dictionary<int, int>();
-        
+
+
         private List<Vector2Int> loadingZoneTiles = new List<Vector2Int>();
         private Dictionary<BusMovement.BusController, Vector2Int> busToLoadingZone = new Dictionary<BusMovement.BusController, Vector2Int>();
         private List<BusMovement.BusController> waitingToMoveBuses = new List<BusMovement.BusController>();
-        
+        private TextMeshPro waitZoneCountText;
+
+
         [Header("Serialize Fields")]
         [SerializeField] private GameObject PlayPanel;
 
@@ -81,10 +86,33 @@ namespace BusAway.Gameplay
         private void Update()
         {
             if (State != GameState.Playing) return;
-            
+
+
             HandleInput();
             ProcessLoadingZones();
             ProcessWaitingBuses();
+            UpdateWaitZoneText();
+        }
+
+        private void UpdateWaitZoneText()
+        {
+            if (waitZoneCountText == null)
+            {
+                var textObj = new GameObject("WaitZoneText");
+                textObj.transform.position = new Vector3(0, 0.05f, 2f);
+                textObj.transform.eulerAngles = new Vector3(90, 180, 0); // Flat on ground, facing flipped camera
+                waitZoneCountText = textObj.AddComponent<TextMeshPro>();
+                waitZoneCountText.fontSize = 6;
+                waitZoneCountText.alignment = TextAlignmentOptions.Center;
+            }
+
+            int currentWaitCount = 0;
+            foreach (var group in busWaitingQueue) currentWaitCount += group.agentCount;
+            int maxLimit = levelGenerator.activeLevelData.busesPerStop * 60;
+
+
+            waitZoneCountText.text = $"{currentWaitCount} / {maxLimit}";
+            waitZoneCountText.color = (currentWaitCount >= maxLimit) ? Color.red : Color.black;
         }
 
         private void ProcessWaitingBuses()
@@ -97,7 +125,8 @@ namespace BusAway.Gameplay
                     waitingToMoveBuses.RemoveAt(i);
                     continue;
                 }
-                
+
+
                 if (TryMoveBus(bus))
                 {
                     waitingToMoveBuses.RemoveAt(i);
@@ -111,7 +140,8 @@ namespace BusAway.Gameplay
             {
                 var bus = kvp.Key;
                 if (bus == queryingBus || bus == null) continue;
-                
+
+
                 if (!bus.isMoving && bus.currentGridPos == tile) return true;
                 if (bus.isMoving && bus.targetGridPos == tile) return true;
             }
@@ -140,22 +170,26 @@ namespace BusAway.Gameplay
                 if (Physics.Raycast(ray, out RaycastHit hit))
                 {
                     float worldX = hit.point.x;
-                    
+
+
                     int bestLand = -1;
                     float minD = float.MaxValue;
                     var crowds = levelGenerator.activeLevelData.resolvedLands;
-                    
+
+
                     if (BusAway.CrowdSystem.CrowdManager.Instance != null && crowds != null)
                     {
                         for (int i = 0; i < crowds.Count; i++)
                         {
                             if (tappedLands.Contains(i)) continue;
-                            
+
+
                             float formationWidth = (crowds.Count - 1) * BusAway.CrowdSystem.CrowdManager.Instance.landSpacingX;
                             float offsetX = -formationWidth / 2f;
                             Vector3 landBase = BusAway.CrowdSystem.CrowdManager.Instance.transform.position + BusAway.CrowdSystem.CrowdManager.Instance.landBaseOffset;
                             float expectedX = landBase.x + offsetX + i * BusAway.CrowdSystem.CrowdManager.Instance.landSpacingX;
-                            
+
+
                             float d = Mathf.Abs(expectedX - worldX);
                             if (d < minD && d < BusAway.CrowdSystem.CrowdManager.Instance.landSpacingX * 0.5f)
                             {
@@ -164,7 +198,8 @@ namespace BusAway.Gameplay
                             }
                         }
                     }
-                    
+
+
                     if (bestLand != -1)
                     {
                         var group = levelGenerator.activeLevelData.resolvedLands[bestLand];
@@ -174,8 +209,21 @@ namespace BusAway.Gameplay
                         if (chunkIdx < group.chunks.Count)
                         {
                             var activeChunk = group.chunks[chunkIdx];
+
+
+                            int currentWaitCount = 0;
+                            foreach (var g in busWaitingQueue) currentWaitCount += g.agentCount;
+                            int maxLimit = levelGenerator.activeLevelData.busesPerStop * 60;
+
+                            if (currentWaitCount + activeChunk.agentCount > maxLimit)
+                            {
+                                Debug.Log("Wait Zone is full! Cannot dispatch more passengers.");
+                                return;
+                            }
+
                             landChunkIndices[bestLand] = chunkIdx + 1; // move to next chunk
-                            
+
+
                             busWaitingQueue.Enqueue(new BusWaitingGroup { color = activeChunk.color, agentCount = activeChunk.agentCount, landIndex = bestLand });
                             Debug.Log($"Queueing Land {bestLand} with {activeChunk.agentCount} agents of color {activeChunk.color}");
 
@@ -196,8 +244,9 @@ namespace BusAway.Gameplay
         private void ProcessLoadingZones()
         {
             if (busWaitingQueue.Count == 0) return;
-            
+
             // Check available loading zone slots
+
             var availableSlots = new List<Vector2Int>(loadingZoneTiles);
             foreach (var kvp in busToLoadingZone)
             {
@@ -206,8 +255,9 @@ namespace BusAway.Gameplay
             if (availableSlots.Count == 0) return;
 
             var group = busWaitingQueue.Peek();
-            
+
             // Find a roaming bus of this color
+
             BusMovement.BusController chosenBus = null;
             foreach (var kvp in busToStop)
             {
@@ -225,7 +275,8 @@ namespace BusAway.Gameplay
                 busToLoadingZone[chosenBus] = slot;
                 Debug.Log($"GameManager: Called Bus of color {group.color} to Loading Zone {slot}");
             }
-        }        private IEnumerator InitGameFlow()
+        }
+        private IEnumerator InitGameFlow()
         {
             if (levelGenerator == null || levelGenerator.activeLevelData == null)
             {
@@ -282,21 +333,34 @@ namespace BusAway.Gameplay
                 {
                     busCtrl.OnPathComplete -= OnBusPathComplete;
                     busCtrl.OnPathComplete += OnBusPathComplete;
-                            
+
                     // Kickstart the movement towards the next calculated pos
+
                     int pathIdx = mainLoopPath.IndexOf(busCtrl.currentGridPos);
                     if (pathIdx != -1)
                     {
                         Vector2Int nextPos = mainLoopPath[(pathIdx + 1) % mainLoopPath.Count];
-                        busCtrl.targetGridPos = nextPos;
                         Vector3 targetWorld = GridToWorld(nextPos);
                         targetWorld.y = busCtrl.transform.position.y;
-                        busCtrl.MoveAlongPath(new List<Vector3> { busCtrl.transform.position, targetWorld }, false);
+
+
+                        float randDelay = Random.Range(0f, 1.25f);
+                        StartCoroutine(DelayedKickstartBus(busCtrl, nextPos, targetWorld, randDelay));
                     }
                 }
             }
             activeBusesWaitingForPlay.Clear();
 
+        }
+
+        private IEnumerator DelayedKickstartBus(BusMovement.BusController busCtrl, Vector2Int nextPos, Vector3 targetWorld, float delay)
+        {
+            if (delay > 0) yield return new WaitForSeconds(delay);
+            if (State != GameState.Playing || busCtrl == null) yield break;
+
+
+            busCtrl.targetGridPos = nextPos;
+            busCtrl.MoveAlongPath(new List<Vector3> { busCtrl.transform.position, targetWorld }, false);
         }
 
         private void OnBusPathComplete(BusMovement.BusController bus)
@@ -324,8 +388,10 @@ namespace BusAway.Gameplay
             Vector2Int nextPos = new Vector2Int(-1, -1);
 
             bool isHeadingToStop = isFull;
-            if (busToLoadingZone.ContainsKey(bus)) {
-                isHeadingToStop = false; 
+            if (busToLoadingZone.ContainsKey(bus))
+            {
+                isHeadingToStop = false;
+
             }
 
             if (isHeadingToStop && busToStop.TryGetValue(bus, out var stop))
@@ -382,7 +448,8 @@ namespace BusAway.Gameplay
                 {
                     bus.OnPathComplete -= OnBusPathComplete;
                     Destroy(bus.gameObject);
-                    
+
+
                     if (busToStop.TryGetValue(bus, out var originStop))
                     {
                         busToStop.Remove(bus);
@@ -394,7 +461,8 @@ namespace BusAway.Gameplay
                     bus.OnPathComplete -= OnBusPathComplete;
                     bus.OnPathComplete += OnBusArrivedAtLoadingZone;
                 }
-                
+
+
                 return true;
             }
             return false;
@@ -418,10 +486,12 @@ namespace BusAway.Gameplay
                 {
                     int spaceAvailable = levelGenerator.activeLevelData.agentsPerBus - bus.currentPassengerCount;
                     int loadAmount = Mathf.Min(spaceAvailable, group.agentCount);
-                    
+
+
                     group.agentCount -= loadAmount;
                     bus.currentPassengerCount += loadAmount;
-                    
+
+
                     if (group.agentCount <= 0)
                     {
                         busWaitingQueue.Dequeue();
@@ -430,7 +500,8 @@ namespace BusAway.Gameplay
             }
 
             busToLoadingZone.Remove(bus);
-            bus.currentGridPos = WorldToGrid(bus.transform.position); 
+            bus.currentGridPos = WorldToGrid(bus.transform.position);
+
             OnBusPathComplete(bus);
         }
 
@@ -438,42 +509,66 @@ namespace BusAway.Gameplay
         {
             var stops = FindObjectsOfType<BusStopController>();
             if (stops == null || stops.Length == 0 || data.resolvedLands == null) return;
-            
+
+
             stopQueues.Clear();
 
-            // Lấy TẤT CẢ các xe cần thiết dựa theo chính xác số người của Crowd!
-            List<Color> allBuses = new List<Color>();
+            // Create a queue for each land representing the sequence of buses it requires
+            List<Queue<Color>> landBusQueues = new List<Queue<Color>>();
+            Dictionary<Color, int> globalColorAccum = new Dictionary<Color, int>();
+
             foreach (var land in data.resolvedLands)
             {
+                Queue<Color> queue = new Queue<Color>();
                 foreach (var chunk in land.chunks)
                 {
-                    int busNeedForThisChunk = chunk.agentCount / data.agentsPerBus;
-                    for (int i = 0; i < busNeedForThisChunk; i++)
+                    if (!globalColorAccum.ContainsKey(chunk.color)) globalColorAccum[chunk.color] = 0;
+                    globalColorAccum[chunk.color] += chunk.agentCount;
+
+                    while (globalColorAccum[chunk.color] >= data.agentsPerBus)
                     {
-                        allBuses.Add(chunk.color);
+                        queue.Enqueue(chunk.color);
+                        globalColorAccum[chunk.color] -= data.agentsPerBus;
+                    }
+                }
+                landBusQueues.Add(queue);
+            }
+
+            List<Color> orderedBuses = new List<Color>();
+            bool addedAny = true;
+            while (addedAny)
+            {
+                addedAny = false;
+                List<int> availableLands = new List<int>();
+                for (int i = 0; i < landBusQueues.Count; i++) if (landBusQueues[i].Count > 0) availableLands.Add(i);
+
+
+                if (availableLands.Count > 0)
+                {
+                    addedAny = true;
+                    // Shuffle the availableLands to make the interleaving random but still top-chunk oriented
+                    for (int n = 0; n < availableLands.Count; n++)
+                    {
+                        int r = Random.Range(n, availableLands.Count);
+                        int tmp = availableLands[n]; availableLands[n] = availableLands[r]; availableLands[r] = tmp;
+                    }
+
+                    foreach (var idx in availableLands)
+                    {
+                        orderedBuses.Add(landBusQueues[idx].Dequeue());
                     }
                 }
             }
 
-            // Shuffle toàn bộ queue
-            for (int i = 0; i < allBuses.Count; i++) {
-                int r = Random.Range(i, allBuses.Count);
-                Color tmp = allBuses[i]; allBuses[i] = allBuses[r]; allBuses[r] = tmp;
+            // Distribute the ordered buses round-robin across available bus stops
+            for (int s = 0; s < stops.Length; s++)
+            {
+                stopQueues[stops[s]] = new Queue<Color>();
             }
 
-            // Chia đều queue cho các trạm
-            int[] busesForStop = new int[stops.Length];
-            for(int i = 0; i < allBuses.Count; i++) {
-                busesForStop[i % stops.Length]++;
-            }
-            
-            int colorIndex = 0;
-            for(int i = 0; i < stops.Length; i++) {
-                Queue<Color> q = new Queue<Color>();
-                for(int j = 0; j < busesForStop[i]; j++) {
-                    q.Enqueue(allBuses[colorIndex++]);
-                }
-                stopQueues[stops[i]] = q;
+            for (int i = 0; i < orderedBuses.Count; i++)
+            {
+                stopQueues[stops[i % stops.Length]].Enqueue(orderedBuses[i]);
             }
         }
 
@@ -511,7 +606,8 @@ namespace BusAway.Gameplay
         {
             if (stop == null || !stopQueues.ContainsKey(stop)) return;
             var queue = stopQueues[stop];
-            
+
+
             if (queue.Count == 0)
             {
                 // Trạm đã hoàn thành tất cả xe
@@ -521,9 +617,10 @@ namespace BusAway.Gameplay
 
             Color nextColor = queue.Dequeue();
             stop.SetColor(nextColor);
-            
+
             // Ý nghĩa của số trên bảng: Tổng số xe CÒN LẠI cần lấy kể từ lúc này của trạm
             // Khi spawn con này, con này + queue.Count là đủ
+
             stop.SetNumber(queue.Count + 1);
 
             // Spawn the bus ở giữa ngã 3 (hoặc ngẫu nhiên trên loop?)
@@ -535,9 +632,11 @@ namespace BusAway.Gameplay
             GameObject busObj = Instantiate(busPrefab, busRoot);
             busObj.name = $"Bus_Active_{nextColor.ToString()}_{queue.Count}";
             busObj.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                    
+
+
             Vector3 worldPos = GridToWorld(spawnGridPos);
-            worldPos.y = 0.5f; 
+            worldPos.y = 0.5f;
+
             busObj.transform.position = worldPos;
 
             // Khởi tạo hướng xoay cho Bus dọc theo đường
@@ -554,7 +653,8 @@ namespace BusAway.Gameplay
                 busCtrl.currentGridPos = spawnGridPos;
                 busCtrl.previousGridPos = spawnGridPos;
                 busToStop[busCtrl] = stop;
-                
+
+
                 if (State == GameState.Playing)
                 {
                     busCtrl.OnPathComplete += OnBusPathComplete;
@@ -626,7 +726,7 @@ namespace BusAway.Gameplay
 
             // Find stems
             var stops = FindObjectsOfType<BusStopController>();
-            foreach(var stop in stops)
+            foreach (var stop in stops)
             {
                 Vector2Int pos = WorldToGrid(stop.transform.position);
                 Vector2Int[] neighbors = { pos + Vector2Int.up, pos + Vector2Int.down, pos + Vector2Int.left, pos + Vector2Int.right };
@@ -661,13 +761,15 @@ namespace BusAway.Gameplay
 
             Vector2Int current = start;
             Vector2Int previous = new Vector2Int(-2, -2);
-            
+
+
             while (true)
             {
                 mainLoopPath.Add(current);
                 var cell = data.GetCell(current.x, current.y);
                 List<Vector2Int> neighbors = GetConnectedNeighbors(current, cell);
-                
+
+
                 Vector2Int next = new Vector2Int(-1, -1);
                 foreach (var n in neighbors)
                 {
@@ -677,7 +779,8 @@ namespace BusAway.Gameplay
                         break;
                     }
                 }
-                
+
+
                 if (next.x == -1 || next == start) break;
                 previous = current;
                 current = next;
@@ -700,9 +803,11 @@ namespace BusAway.Gameplay
                 if (cell.ToString().Contains("_N_") || cell.ToString().Contains("_S_")) { list.Add(pos + new Vector2Int(1, 0)); list.Add(pos + new Vector2Int(-1, 0)); }
                 else { list.Add(pos + new Vector2Int(0, -1)); list.Add(pos + new Vector2Int(0, 1)); }
             }
-            
+
+
             var filtered = new List<Vector2Int>();
-            foreach(var n in list) {
+            foreach (var n in list)
+            {
                 var nCell = levelGenerator.activeLevelData.GetCell(n.x, n.y);
                 if (nCell != RoadCellType.Empty && !nCell.ToString().Contains("DeadEnd")) filtered.Add(n);
             }
@@ -712,11 +817,13 @@ namespace BusAway.Gameplay
         private Vector2Int WorldToGrid(Vector3 worldPos)
         {
             if (levelGenerator != null) worldPos -= levelGenerator.transform.position;
-            
+
+
             float tSize = levelGenerator.activeLevelData.tileSize;
             float offsetX = (levelGenerator.activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
             float offsetZ = (levelGenerator.activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
-            
+
+
             int x = Mathf.RoundToInt((offsetX - worldPos.x) / tSize);
             int y = Mathf.RoundToInt((offsetZ - worldPos.z) / tSize);
             return new Vector2Int(x, y);
@@ -727,7 +834,8 @@ namespace BusAway.Gameplay
             float tSize = levelGenerator.activeLevelData.tileSize;
             float offsetX = (levelGenerator.activeLevelData.gridWidth * tSize) / 2f - (tSize / 2f);
             float offsetZ = (levelGenerator.activeLevelData.gridHeight * tSize) / 2f - (tSize / 2f);
-            
+
+
             Vector3 localPos = new Vector3(offsetX - gridPos.x * tSize, 0f, offsetZ - gridPos.y * tSize);
             if (levelGenerator != null) return localPos + levelGenerator.transform.position;
             return localPos;
