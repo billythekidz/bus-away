@@ -375,7 +375,7 @@ namespace BusAway.Gameplay
             {
                 int busCount = 0;
                 for (int i = 0; i < busColorAlloc.Count; i++) if (busColorAlloc[i] == color) busCount++;
-                
+
                 int remaining = busCount * activeLevelData.agentsPerBus;
                 if (remaining <= 0) continue;
 
@@ -391,10 +391,10 @@ namespace BusAway.Gameplay
                         int remAfter = remaining - c;
                         if (remAfter == 0 || remAfter >= activeLevelData.minChunkSize) validChoices.Add(c);
                     }
-                    
+
                     int chosenChunk = remaining;
                     if (validChoices.Count > 0) chosenChunk = validChoices[Random.Range(0, validChoices.Count)];
-                    
+
                     allChunks.Add(new CrowdLandConfig { agentCount = chosenChunk, color = color });
                     remaining -= chosenChunk;
                     totalAgents += chosenChunk;
@@ -403,10 +403,30 @@ namespace BusAway.Gameplay
 
             ShuffleList(allChunks);
 
-            for (int i = 0; i < allChunks.Count; i++)
+            // Greedy distribution: ensure no two consecutive chunks in the same land share a color.
+            var chunksToDistribute = new System.Collections.Generic.List<CrowdLandConfig>(allChunks);
+            var lastLandColor = new Color[landCount];
+            for (int i = 0; i < landCount; i++) lastLandColor[i] = Color.clear;
+            int landCursor = 0;
+
+            while (chunksToDistribute.Count > 0)
             {
-                int landDst = i % landCount;
-                activeLevelData.resolvedLands[landDst].chunks.Add(allChunks[i]);
+                // Find first chunk that doesn't match the last color assigned to this land
+                int chosen = -1;
+                for (int j = 0; j < chunksToDistribute.Count; j++)
+                {
+                    if (chunksToDistribute[j].color != lastLandColor[landCursor])
+                    {
+                        chosen = j;
+                        break;
+                    }
+                }
+                if (chosen == -1) chosen = 0; // fallback: no valid choice, accept duplicate
+
+                activeLevelData.resolvedLands[landCursor].chunks.Add(chunksToDistribute[chosen]);
+                lastLandColor[landCursor] = chunksToDistribute[chosen].color;
+                chunksToDistribute.RemoveAt(chosen);
+                landCursor = (landCursor + 1) % landCount;
             }
 
 #if UNITY_EDITOR

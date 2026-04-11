@@ -16,6 +16,9 @@ namespace BusMovement
         public Transform busWallB;
         public Transform busWallL;
 
+        // Passenger count label (auto-created at runtime)
+        private TMPro.TextMeshPro passengerLabel;
+
 
         [Header("Wheels")]
         public Transform wheelFL;
@@ -57,7 +60,6 @@ namespace BusMovement
             visualContainer = new GameObject("VisualContainer").transform;
             visualContainer.SetParent(transform, false);
 
-
             if (busFloor) busFloor.SetParent(visualContainer, true);
             if (busWallF) busWallF.SetParent(visualContainer, true);
             if (busWallR) busWallR.SetParent(visualContainer, true);
@@ -69,7 +71,6 @@ namespace BusMovement
                 foreach (var sm in skidMarks)
                 {
                     if (sm != null)
-
                     {
                         sm.time *= 0.33f;
                     }
@@ -77,8 +78,35 @@ namespace BusMovement
             }
 
             lastPos = transform.position;
-
+            CreatePassengerLabel();
             StartVibration();
+        }
+
+        private void CreatePassengerLabel()
+        {
+            var labelGo = new GameObject("PassengerLabel");
+            labelGo.transform.SetParent(transform, false);
+            // Place label above the roof, flat-facing up, rotated to be readable from camera
+            labelGo.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+            labelGo.transform.localEulerAngles = new Vector3(90f, 180f, 0f);
+
+            passengerLabel = labelGo.AddComponent<TMPro.TextMeshPro>();
+            passengerLabel.fontSize = 12f;
+            passengerLabel.fontStyle = TMPro.FontStyles.Bold;
+            passengerLabel.alignment = TMPro.TextAlignmentOptions.Center;
+            passengerLabel.color = Color.white;
+            passengerLabel.text = "0";
+        }
+
+        /// <summary>Call after boarding to refresh the roof label.</summary>
+        public void UpdatePassengerLabel(int current, int capacity)
+        {
+            currentPassengerCount = current;
+            if (passengerLabel == null) return;
+            passengerLabel.text = current.ToString();
+            // Pulse colour: white → red as bus fills up
+            float t = capacity > 0 ? (float)current / capacity : 0f;
+            passengerLabel.color = Color.Lerp(Color.white, Color.red, t);
         }
 
         private void StartVibration()

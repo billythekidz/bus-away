@@ -277,28 +277,47 @@ namespace BusAway.Gameplay
             }
         }
 
+        // Throttle ProcessLoadingZones log spam
+        private float _lastLoadingZoneLogTime = -999f;
+
         private void ProcessLoadingZones()
         {
+            bool verbose = (Time.time - _lastLoadingZoneLogTime) > 2f;
+
             if (busWaitingQueue.Count == 0) return;
 
             // Check available loading zone slots
+            if (loadingZoneTiles.Count == 0)
+            {
+                if (verbose) { Debug.LogWarning("[Loading] loadingZoneTiles is EMPTY! No loading zone was set up."); _lastLoadingZoneLogTime = Time.time; }
+                return;
+            }
 
             var availableSlots = new List<Vector2Int>(loadingZoneTiles);
             foreach (var kvp in busToLoadingZone)
             {
                 availableSlots.Remove(kvp.Value);
             }
-            if (availableSlots.Count == 0) return;
+
+            if (availableSlots.Count == 0)
+            {
+                if (verbose) { Debug.Log($"[Loading] All {loadingZoneTiles.Count} slot(s) occupied. Buses in zone: {busToLoadingZone.Count}"); _lastLoadingZoneLogTime = Time.time; }
+                return;
+            }
 
             var group = busWaitingQueue.Peek();
+            if (verbose) Debug.Log($"[Loading] Seeking bus of color {group.color} ({group.agentCount} agents). Buses registered: {busToStop.Count}");
 
             // Find a roaming bus of this color
-
             BusMovement.BusController chosenBus = null;
             foreach (var kvp in busToStop)
             {
                 var bus = kvp.Key;
-                if (!busToLoadingZone.ContainsKey(bus) && bus.busColor == group.color)
+                if (bus == null) continue;
+                bool alreadyInZone = busToLoadingZone.ContainsKey(bus);
+                bool colorMatch = bus.busColor == group.color;
+                if (verbose) Debug.Log($"  Bus '{bus.name}' color={bus.busColor} vs group={group.color} | match={colorMatch} | inZone={alreadyInZone}");
+                if (!alreadyInZone && colorMatch)
                 {
                     chosenBus = bus;
                     break;
@@ -309,7 +328,12 @@ namespace BusAway.Gameplay
             {
                 Vector2Int slot = availableSlots[0];
                 busToLoadingZone[chosenBus] = slot;
-                Debug.Log($"GameManager: Called Bus of color {group.color} to Loading Zone {slot}");
+                _lastLoadingZoneLogTime = Time.time;
+                Debug.Log($"[Loading] <color=cyan>Bus '{chosenBus.name}' assigned to Loading Zone slot {slot}. Will stop there next time it passes.</color>");
+            }
+            else
+            {
+                if (verbose) { Debug.LogWarning($"[Loading] No matching bus found for color {group.color}!"); _lastLoadingZoneLogTime = Time.time; }
             }
         }
         private IEnumerator InitGameFlow()
@@ -424,10 +448,10 @@ namespace BusAway.Gameplay
             Vector2Int nextPos = new Vector2Int(-1, -1);
 
             bool isHeadingToStop = isFull;
-            if (busToLoadingZone.ContainsKey(bus))
+            bool hasLoadingAssignment = busToLoadingZone.TryGetValue(bus, out var assignedSlot);
+            if (hasLoadingAssignment)
             {
                 isHeadingToStop = false;
-
             }
 
             if (isHeadingToStop && busToStop.TryGetValue(bus, out var stop))
@@ -454,6 +478,7 @@ namespace BusAway.Gameplay
                 }
                 else
                 {
+                    Debug.LogWarning($"[TryMoveBus] Bus '{bus.name}' at gridPos {bus.currentGridPos} is NOT on mainLoopPath! Path count={mainLoopPath.Count}");
                     var neighbors = GetConnectedNeighbors(bus.currentGridPos, levelGenerator.activeLevelData.GetCell(bus.currentGridPos.x, bus.currentGridPos.y));
                     foreach (var n in neighbors)
                     {
@@ -474,7 +499,12 @@ namespace BusAway.Gameplay
                 bus.targetGridPos = nextPos;
 
                 bool isParkingAtStem = isHeadingToStop && busToStop.TryGetValue(bus, out var stop2) && stopToStem.TryGetValue(stop2, out var stem2) && nextPos == stem2;
-                bool isLoadingZone = busToLoadingZone.TryGetValue(bus, out var loadSlot) && nextPos == loadSlot;
+                bool isLoadingZone = hasLoadingAssignment && nextPos == assignedSlot;
+
+                if (hasLoadingAssignment)
+                {
+                    Debug.Log($"[TryMoveBus] Bus '{bus.name}' assigned to zone {assignedSlot}, currently at {bus.currentGridPos}, nextPos={nextPos}, isLoadingZone={isLoadingZone}");
+                }
 
                 Vector3 targetWorld = GridToWorld(nextPos);
                 targetWorld.y = bus.transform.position.y;
@@ -482,26 +512,63 @@ namespace BusAway.Gameplay
 
                 if (isParkingAtStem)
                 {
+                    // Don't destroy immediately — wait for MoveAlongPath tween to finish,
+                    // then drive the bus into the physical stop and disable it there.
                     bus.OnPathComplete -= OnBusPathComplete;
-                    Destroy(bus.gameObject);
-
-
-                    if (busToStop.TryGetValue(bus, out var originStop))
-                    {
-                        busToStop.Remove(bus);
-                        SpawnNextBusFromStop(originStop);
-                    }
+                    bus.OnPathComplete += OnBusArrivedAtStem;
                 }
                 else if (isLoadingZone)
                 {
+                    Debug.Log($"[TryMoveBus] <color=yellow>Bus '{bus.name}' is heading to Loading Zone {assignedSlot}! Switching to OnBusArrivedAtLoadingZone.</color>");
                     bus.OnPathComplete -= OnBusPathComplete;
                     bus.OnPathComplete += OnBusArrivedAtLoadingZone;
                 }
 
-
                 return true;
             }
             return false;
+        }
+
+        // ── Called when bus tween finishes arriving at the stem tile (fork to stop) ──
+        private void OnBusArrivedAtStem(BusMovement.BusController bus)
+        {
+            bus.OnPathComplete -= OnBusArrivedAtStem;
+
+            if (busToStop.TryGetValue(bus, out var stop) && stop != null)
+            {
+                // Drive bus from stem into the physical bus stop position
+                Vector3 stopWorldPos = stop.transform.position;
+                stopWorldPos.y = bus.transform.position.y;
+
+                Vector3 dir = (stopWorldPos - bus.transform.position);
+                if (dir.sqrMagnitude > 0.001f)
+                    bus.transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+                bus.OnPathComplete += OnBusArrivedAtStop;
+                bus.MoveAlongPath(new List<Vector3> { bus.transform.position, stopWorldPos }, true);
+            }
+            else
+            {
+                // No stop info — just disable in place
+                bus.gameObject.SetActive(false);
+            }
+        }
+
+        // ── Called when bus finishes moving into the bus stop ──────────────────────
+        private void OnBusArrivedAtStop(BusMovement.BusController bus)
+        {
+            bus.OnPathComplete -= OnBusArrivedAtStop;
+
+            if (busToStop.TryGetValue(bus, out var originStop))
+            {
+                busToStop.Remove(bus);
+                bus.gameObject.SetActive(false);   // park & hide at stop
+                SpawnNextBusFromStop(originStop);   // dispatch next bus from that stop
+            }
+            else
+            {
+                bus.gameObject.SetActive(false);
+            }
         }
 
         private void OnBusArrivedAtLoadingZone(BusMovement.BusController bus)
@@ -512,16 +579,22 @@ namespace BusAway.Gameplay
             bus.previousGridPos = bus.currentGridPos;
             bus.currentGridPos = currentGridPos;
 
+            Debug.Log($"[Boarding] <color=lime>Bus '{bus.name}' ARRIVED at Loading Zone {currentGridPos}. Queue size={busWaitingQueue.Count}, passengers={bus.currentPassengerCount}</color>");
             StartCoroutine(LoadPassengersCoroutine(bus));
         }
 
         private IEnumerator LoadPassengersCoroutine(BusMovement.BusController bus)
         {
-            while (bus.currentPassengerCount < levelGenerator.activeLevelData.agentsPerBus && busWaitingQueue.Count > 0)
+            int capacity = levelGenerator.activeLevelData.agentsPerBus;
+            Debug.Log($"[Boarding] Starting LoadPassengersCoroutine for '{bus.name}' (capacity={capacity}, current={bus.currentPassengerCount}). Queue size={busWaitingQueue.Count}");
+
+            while (bus.currentPassengerCount < capacity && busWaitingQueue.Count > 0)
             {
                 var group = busWaitingQueue.Peek();
+                Debug.Log($"[Boarding] Queue head: color={group.color}, agentCount={group.agentCount}. Bus color={bus.busColor}, match={group.color == bus.busColor}");
                 if (group.color != bus.busColor)
                 {
+                    Debug.Log($"[Boarding] Color mismatch - stopping load.");
                     break; // Queue head is not our color, stop loading
                 }
 
@@ -529,44 +602,78 @@ namespace BusAway.Gameplay
                 int loadAmount = Mathf.Min(spaceAvailable, group.agentCount);
 
                 var agentPositions = BusAway.CrowdSystem.CrowdManager.Instance.ExtractWaitZoneAgents(bus.busColor, loadAmount);
-                
+
+
                 for (int i = 0; i < agentPositions.Count; i++)
                 {
                     var startPos = agentPositions[i];
-                    
+
+
                     GameObject dummy = Instantiate(BusAway.CrowdSystem.CrowdManager.Instance.agentPrefab);
                     dummy.transform.position = startPos;
-                    
+
+
                     var renderers = dummy.GetComponentsInChildren<Renderer>(true);
                     MaterialPropertyBlock mb = new MaterialPropertyBlock();
                     mb.SetColor("_BaseColor", bus.busColor);
-                    foreach(var r in renderers) r.SetPropertyBlock(mb);
+                    foreach (var r in renderers) r.SetPropertyBlock(mb);
 
                     int currentSlot = bus.currentPassengerCount + i;
                     int col = currentSlot % 2;
                     int row = currentSlot / 2;
-                    
+
+
                     int maxCapacity = levelGenerator.activeLevelData.agentsPerBus;
                     int maxRows = Mathf.CeilToInt(maxCapacity / 2f);
-                    
-                    float frontZ = 0.35f;   // Vị trí đầu xe (bên trong thùng)
-                    float backZ = -0.55f;   // Vị trí cuối xe (bên trong thùng)
-                    float rowSpacing = maxRows <= 1 ? 0f : (frontZ - backZ) / (maxRows - 1);
-                    // Giới hạn spacing tối đa để không bị thưa nếu ít người
-                    rowSpacing = Mathf.Min(rowSpacing, 0.45f); 
-                    
-                    float seatX = (col == 0) ? -0.25f : 0.25f;
-                    float seatZ = frontZ - row * rowSpacing;
-                    Vector3 localSeat = new Vector3(seatX, 0.25f, seatZ);
-                    
+
+                    // ── Snug cell-grid layout derived from wall positions ────────────────
+                    // Divide the full interior into (maxRows × 2) equal cells.
+                    // Each passenger sits at the center of their cell → no wasted space.
+                    Transform vc = bus.busFloor.parent; // VisualContainer
+
+                    float fz = bus.busWallF != null ? vc.InverseTransformPoint(bus.busWallF.position).z : 2.1f;
+                    float bz = bus.busWallB != null ? vc.InverseTransformPoint(bus.busWallB.position).z : -2.1f;
+                    float lx = bus.busWallL != null ? vc.InverseTransformPoint(bus.busWallL.position).x : -1.1f;
+                    float rx = bus.busWallR != null ? vc.InverseTransformPoint(bus.busWallR.position).x : 1.1f;
+
+                    // Grid cell sizes
+                    float totalZ = Mathf.Abs(fz - bz);     // e.g. 4.2 local
+                    float totalX = Mathf.Abs(lx - rx);     // e.g. 2.2 local
+                    float cellZ = totalZ / maxRows;        // height of each row cell
+                    float cellX = totalX / 2f;             // width of each col cell
+
+                    float centerZ = (fz + bz) * 0.5f;       // ≈ 0
+                    float centerX = (lx + rx) * 0.5f;       // ≈ -0.008 (slight asymmetry ok)
+
+                    // Seat center = cell center (row 0 = front, row N-1 = rear)
+                    float seatZ = centerZ + totalZ * 0.5f - cellZ * (row + 0.5f);
+                    float seatX = (col == 0)
+                        ? centerX - cellX * 0.5f   // left column
+                        : centerX + cellX * 0.5f;  // right column
+
+                    Vector3 localSeat = new Vector3(seatX, 0.3f, seatZ);
+
+
                     dummy.transform.SetParent(bus.busFloor.parent, true);
-                    
+
                     PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.25f, PrimeTween.Ease.OutQuad);
                     PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.25f, PrimeTween.Ease.OutQuad);
 
+                    // Spark bling VFX — persistent above passenger head until bus is disabled
+                    if (bus.sparkBlingVFX != null)
+                    {
+                        var spark = Instantiate(bus.sparkBlingVFX, dummy.transform);
+                        spark.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+                        var main = spark.main;
+                        main.loop = true;
+                        main.stopAction = ParticleSystemStopAction.None;
+                        spark.Play();
+                    }
+
                     // Haptic: medium pulse each time a passenger boards the bus
                     HapticFeedback.Medium();
-                    
+
+
                     yield return new WaitForSeconds(0.05f);
                 }
 
@@ -577,6 +684,7 @@ namespace BusAway.Gameplay
 
                 group.agentCount -= loadAmount;
                 bus.currentPassengerCount += loadAmount;
+                bus.UpdatePassengerLabel(bus.currentPassengerCount, capacity);
 
                 if (group.agentCount <= 0)
                 {
@@ -584,6 +692,7 @@ namespace BusAway.Gameplay
                 }
             }
 
+            Debug.Log($"[Boarding] Done loading. Bus '{bus.name}' now has {bus.currentPassengerCount}/{capacity} passengers.");
             busToLoadingZone.Remove(bus);
             bus.OnPathComplete -= OnBusPathComplete;
             bus.OnPathComplete += OnBusPathComplete;
@@ -721,7 +830,7 @@ namespace BusAway.Gameplay
             Transform busRoot = this.transform.Find("BusesRoot");
             GameObject busObj = Instantiate(busPrefab, busRoot);
             busObj.name = $"Bus_Active_{nextColor.ToString()}_{queue.Count}";
-            busObj.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+            busObj.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
 
 
             Vector3 worldPos = GridToWorld(spawnGridPos);
@@ -874,14 +983,16 @@ namespace BusAway.Gameplay
 
             if (mainLoopPath.Count > 0)
             {
-                int maxY = -1;
-                foreach(var pt in mainLoopPath) if (pt.y > maxY) maxY = pt.y;
+                // Camera rotated 180° around Y: grid Y=0 → world Z=+max → visual BOTTOM
+                // We want the tile at minY (= visual bottom, where passengers wait)
+                int minY = int.MaxValue;
+                foreach (var pt in mainLoopPath) if (pt.y < minY) minY = pt.y;
 
                 int bestX = -1;
                 int minDistance = 9999;
-                foreach(var pt in mainLoopPath)
+                foreach (var pt in mainLoopPath)
                 {
-                    if (pt.y == maxY)
+                    if (pt.y == minY)
                     {
                         int dist = Mathf.Abs(pt.x - centerX);
                         if (dist < minDistance)
@@ -891,15 +1002,20 @@ namespace BusAway.Gameplay
                         }
                     }
                 }
-                
+
+
                 if (bestX != -1)
                 {
-                    loadingZoneTiles.Add(new Vector2Int(bestX, maxY));
-                    Debug.Log($"Selected Loading Zone exactly at loop bottom center: {bestX}, {maxY}");
+                    loadingZoneTiles.Add(new Vector2Int(bestX, minY));
+                    Debug.Log($"<color=cyan>[BuildRoadNetwork] Loading Zone set at grid ({bestX}, {minY}), world={GridToWorld(new Vector2Int(bestX, minY))}</color>");
+                }
+                else
+                {
+                    Debug.LogError($"[BuildRoadNetwork] Could not find a loading zone tile! minY={minY}, centerX={centerX}. Loop tiles at minY: {string.Join(",", System.Array.FindAll(mainLoopPath.ToArray(), p => p.y == minY))}");
                 }
             }
 
-            Debug.Log($"Built Main Road Loop with {mainLoopPath.Count} tiles.");
+            Debug.Log($"[BuildRoadNetwork] Main Road Loop built with {mainLoopPath.Count} tiles. LoadingZoneTiles={loadingZoneTiles.Count}");
         }
 
         private List<Vector2Int> GetConnectedNeighbors(Vector2Int pos, RoadCellType cell)
