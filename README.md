@@ -74,11 +74,11 @@ As per the assignment guidelines, AI was used for **≥ 50%** of the development
 
 | Task | AI Tool Used |
 |---|---|
-| Architecture planning & system design | Claude (Antigravity / Gemini) |
-| Core grid & bus movement logic | Claude (code generation + review) |
-| Level data format design (JSON schema) | Claude |
-| UI layout structure (UXML / Canvas) | Claude |
-| Particle & animation setup guidance | Claude |
+| Architecture planning & system design |  (Antigravity / Gemini 3.1) |
+| Core grid & bus movement logic | Gemini 3.1 (code generation + review) |
+| Level data format design (JSON schema) | Gemini 3.1 |
+| UI layout structure (UXML / Canvas) | Gemini 3.1 |
+| Particle & animation setup guidance | Gemini 3.1 |
 | README writing | Claude |
 
 All AI-generated code was reviewed, tested, and integrated manually by the developer.
