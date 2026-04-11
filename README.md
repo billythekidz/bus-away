@@ -21,8 +21,10 @@ A polished, playable puzzle prototype inspired by [Buses Away](https://apps.appl
 
 ## 📐 Game Design Rules
 
-- **The T-Junction Bus Stop Rule**: Trong trò chơi, mọi ngã ba (T-Junction) đều là một trạm xe buýt. Phần cổng mở rộng (stem) của ngã ba T chính là bãi đỗ/chuồng để xếp xe. Không có ngã ba nào chỉ đơn thuần là đường đi ngang qua. Do đó, các Block `HalfT` đã được quy chiếu để gánh vác cả vai trò tạo khúc cua chữ T lẫn vai trò là điểm Park xe chờ (Bus Stop).
-- **The Active Bus Limit Rule**: Bao nhiêu trạm xe buýt (Bus Stop) thì có đúng bấy nhiêu xe buýt được lưu thông trên đường cùng một lúc, không hơn, không kém. Toàn bộ xe buýt sẽ được generate đủ ngay từ lúc khởi tạo level (gồm cả các xe trên đường và các xe đang chờ). Những xe vượt quá sức chứa của đường sẽ phải nằm chờ ở hàng đợi (queue), và chỉ được điều vào đường lưới khi có xe khác hoàn thành việc đón trả khách và rời khỏi grid.
+![Level Design Example](Docs/GameDesign/LevelDesignExample.jpg)
+
+- **The T-Junction Bus Stop Rule**: In the game, every T-Junction serves as a bus stop. The extended stem of the T-junction acts as the parking slot/bay for buses. There are no T-junctions that are merely regular road intersections. Therefore, the `HalfT` blocks are designed to function both as a T-junction curve and as a parking spot for waiting buses.
+- **The Active Bus Limit Rule**: The number of active buses on the road at any given time is exactly equal to the number of bus stops, no more, no less. All buses are fully generated at the start of the level (including those currently on the road and those waiting in queue). Buses that exceed the road's capacity are placed in a waiting queue and are only dispatched onto the grid when another bus completes its boarding and leaves the grid.
 
 ## 🗂️ Project Structure (Feature-Based Architecture)
 
@@ -101,7 +103,7 @@ To illustrate how we bridged the gap between AI logic and manual 3D asset creati
 ## 📅 Project Timeline & Evolution
 
 The development process of **Bus Away** is chronologically documented and divided into three major milestones. For a detailed, step-by-step timeline synchronizing all GitHub Issues and Commits, please see the full docs: 
-👉 **[Full Project Timeline (English)](Docs/Project_Timeline_En.md)** | **[Bản Tiến trình Tiếng Việt](Docs/Project_Timeline_Vi.md)**
+👉 **[Full Project Timeline (English)](Docs/Project_Timeline_En.md)** | **[Vietnamese Timeline Version](Docs/Project_Timeline_Vi.md)**
 
 **Summary of Phases:**
 - **Phase 1: Foundation & Architecture:** Initialized the project, built the Data-Driven Level Generation System, and perfected the 3D procedural Unity Road Generator. Implemented the highly optimized Crowd Simulation System using Unity Job System, Burst, and `RenderMeshInstanced`.
@@ -151,8 +153,8 @@ The latest APK is available in the **Releases** section of this repository.
 - [x] Private GitHub repository
 - [x] Audio SFX & Haptic Feedback 
 - [x] Custom 3D App Icons
-- [ ] APK build
-- [ ] Gameplay video
+- [x] APK build
+- [x] Gameplay video
 
 ---
 

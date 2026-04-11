@@ -92,5 +92,17 @@ namespace BusAway.Gameplay
             }
         }
 #endif
+
+        // [UNITY HACK] - Force Unity to add Android VIBRATE permission to AndroidManifest.xml
+        // Since we use AndroidJavaObject reflection above, Unity's IL parser doesn't detect the 
+        // need for the permission and omits it from the final APK, making vibration silently fail.
+        // Putting this here ensures the permission is always included without us needing a custom manifest!
+        private static void ForcePermissionGeneration()
+        {
+            if (Application.isEditor && false)
+            {
+                Handheld.Vibrate();
+            }
+        }
     }
 }
