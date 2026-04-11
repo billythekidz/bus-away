@@ -361,13 +361,24 @@ namespace BusAway.Gameplay
             activeLevelData.resolvedLands.Clear();
             for (int i = 0; i < landCount; i++) activeLevelData.resolvedLands.Add(new CrowdLandGroup());
 
-            int totalAgentsPerColor = activeLevelData.busStopLength * activeLevelData.busesPerStop * activeLevelData.agentsPerBus;
+            int totalBuses = activeLevelData.busStopLength * activeLevelData.busesPerStop;
+            var busColorAlloc = new System.Collections.Generic.List<Color>();
+            for(int i = 0; i < totalBuses; i++)
+            {
+                busColorAlloc.Add(palette[i % palette.Count]);
+            }
+
             var allChunks = new System.Collections.Generic.List<CrowdLandConfig>();
             int totalAgents = 0;
 
             foreach (var color in palette)
             {
-                int remaining = totalAgentsPerColor;
+                int busCount = 0;
+                for (int i = 0; i < busColorAlloc.Count; i++) if (busColorAlloc[i] == color) busCount++;
+                
+                int remaining = busCount * activeLevelData.agentsPerBus;
+                if (remaining <= 0) continue;
+
                 while (remaining > 0)
                 {
                     int minChunk = activeLevelData.minChunkSize;

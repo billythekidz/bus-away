@@ -705,10 +705,8 @@ namespace BusAway.Gameplay
             Color nextColor = queue.Dequeue();
             stop.SetColor(nextColor);
 
-            // Ý nghĩa của số trên bảng: Tổng số xe CÒN LẠI cần lấy kể từ lúc này của trạm
-            // Khi spawn con này, con này + queue.Count là đủ
-
-            stop.SetNumber(queue.Count + 1);
+            // Số trên bảng hiển thị ĐÚNG số lượng xe đang còn xếp hàng bên trong bến chờ xuất phát
+            stop.SetNumber(queue.Count);
 
             // Spawn the bus ở giữa ngã 3 (hoặc ngẫu nhiên trên loop?)
             // Để đẹp mắt, có thể randomize nó trên đường main loop, HOẶC ném ngay ở stem của bến
@@ -804,25 +802,7 @@ namespace BusAway.Gameplay
 
             int bottomY = data.gridHeight - 1;
             int centerX = data.gridWidth / 2;
-            int bestX = -1;
-            int minDistance = 9999;
 
-            for (int x = 0; x < data.gridWidth; x++)
-            {
-                if (data.GetCell(x, bottomY) == RoadCellType.Straight_EW)
-                {
-                    int dist = Mathf.Abs(x - centerX);
-                    if (dist < minDistance)
-                    {
-                        minDistance = dist;
-                        bestX = x;
-                    }
-                }
-            }
-            if (bestX != -1)
-            {
-                loadingZoneTiles.Add(new Vector2Int(bestX, bottomY));
-            }
 
             // Find stems
             var stops = FindObjectsOfType<BusStopController>();
@@ -886,6 +866,34 @@ namespace BusAway.Gameplay
                 current = next;
                 if (mainLoopPath.Count > 1000) break;
             }
+
+            if (mainLoopPath.Count > 0)
+            {
+                int maxY = -1;
+                foreach(var pt in mainLoopPath) if (pt.y > maxY) maxY = pt.y;
+
+                int bestX = -1;
+                int minDistance = 9999;
+                foreach(var pt in mainLoopPath)
+                {
+                    if (pt.y == maxY)
+                    {
+                        int dist = Mathf.Abs(pt.x - centerX);
+                        if (dist < minDistance)
+                        {
+                            minDistance = dist;
+                            bestX = pt.x;
+                        }
+                    }
+                }
+                
+                if (bestX != -1)
+                {
+                    loadingZoneTiles.Add(new Vector2Int(bestX, maxY));
+                    Debug.Log($"Selected Loading Zone exactly at loop bottom center: {bestX}, {maxY}");
+                }
+            }
+
             Debug.Log($"Built Main Road Loop with {mainLoopPath.Count} tiles.");
         }
 
