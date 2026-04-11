@@ -34,7 +34,10 @@ namespace BusAway.Gameplay
         public int goalCoins = 0;
 
         private List<Vector2Int> mainLoopPath = new List<Vector2Int>();
-        private Dictionary<BusStopController, Queue<Color>> stopQueues = new Dictionary<BusStopController, Queue<Color>>();
+        private List<Vector2Int> mainLoopPath = new List<Vector2Int>();
+        private List<Color> globalBusColorPool = new List<Color>();
+        private Dictionary<BusStopController, int> stopRemainingCounts = new Dictionary<BusStopController, int>();
+        private Dictionary<BusStopController, Color> stopCurrentColors = new Dictionary<BusStopController, Color>();
         private Dictionary<BusStopController, Vector2Int> stopToStem = new Dictionary<BusStopController, Vector2Int>();
         private Dictionary<BusMovement.BusController, BusStopController> busToStop = new Dictionary<BusMovement.BusController, BusStopController>();
         private List<BusMovement.BusController> activeBusesWaitingForPlay = new List<BusMovement.BusController>();
@@ -61,8 +64,29 @@ namespace BusAway.Gameplay
         [SerializeField] private GameObject PlayPanel;
         public GameObject gameOverPanel;
         public GameObject victoryPanel;
-        public TMPro.TextMeshProUGUI timerText;
+        public TMPro.TMP_Text timerText;
+        public UnityEngine.UI.Slider coinProgressSlider;
+        public TMPro.TMP_Text coinText;
         public float timeRemaining = 180f;
+
+        [Header("Audio")]
+        public AudioSource audioSource;
+        public AudioClip sfxBusAppear;
+        public AudioClip sfxBusDisappear;
+        public AudioClip sfxCoinScored;
+        public AudioClip sfxWin;
+        public AudioClip sfxGameOver;
+        public AudioClip sfxTapLand;
+        public AudioClip sfxAgentBoard;
+
+        private void PlaySFX(AudioClip clip)
+        {
+            if (clip != null)
+            {
+                if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.PlayOneShot(clip);
+            }
+        }
 
         [Header("Serialize Fields")]
         [SerializeField] public Transform busWaitZone;
@@ -76,7 +100,8 @@ namespace BusAway.Gameplay
                 return;
             }
             Instance = this;
-            
+
+
             if (PlayerPrefs.HasKey("CurrentLevelIndex"))
             {
                 currentLevelIndex = PlayerPrefs.GetInt("CurrentLevelIndex", 0);
@@ -99,6 +124,7 @@ namespace BusAway.Gameplay
 
         private void Update()
         {
+
             if (State != GameState.Playing) return;
 
             timeRemaining -= Time.deltaTime;
@@ -106,9 +132,9 @@ namespace BusAway.Gameplay
             {
                 timeRemaining = 0;
                 State = GameState.GameOver;
+                PlaySFX(sfxGameOver);
                 if (gameOverPanel != null) gameOverPanel.SetActive(true);
                 Debug.Log("<color=red>GAME OVER: Time out!</color>");
-                return;
             }
 
             if (timerText != null)
@@ -243,7 +269,8 @@ namespace BusAway.Gameplay
 
                             // Determine Z bounds of the active chunk.
                             // ALL active chunks physically shift to row 0 in CrowdManager after preceding chunks are dispatched!
-                            int startRow = 0; 
+                            int startRow = 0;
+
                             int chunkRows = activeChunk.agentCount / 4;
 
 
@@ -276,6 +303,8 @@ namespace BusAway.Gameplay
 
                             busWaitingQueue.Add(new BusWaitingGroup { color = activeChunk.color, agentCount = activeChunk.agentCount, landIndex = bestLand });
                             Debug.Log($"Queueing Land {bestLand} with {activeChunk.agentCount} agents of color {activeChunk.color}");
+
+                            PlaySFX(sfxTapLand);
 
                             // Haptic: light tap to confirm valid land selection
                             HapticFeedback.Light();
@@ -345,21 +374,26 @@ namespace BusAway.Gameplay
                     {
                         var bus = kvp.Key;
                         if (bus == null) continue;
-                        
+
+
                         int capacity = levelGenerator.activeLevelData.agentsPerBus;
                         if (bus.currentPassengerCount >= capacity) continue; // DO NOT target full buses!
-                        
+
+
                         bool alreadyInZone = busToLoadingZone.ContainsKey(bus);
                         bool colorMatch = bus.busColor == group.color;
-                        
+
+
                         if (!alreadyInZone && colorMatch)
                         {
                             chosenBus = bus;
                             chosenGroup = group;
-                            break; 
+                            break;
+
                         }
                     }
-                    if (chosenBus != null) break; 
+                    if (chosenBus != null) break;
+
                 }
 
                 if (chosenBus != null)
@@ -391,10 +425,35 @@ namespace BusAway.Gameplay
             }
 
             var data = levelGenerator.activeLevelData;
-            goalCoins = data.levelGoalCoin;
+
+            // Automatically calculate the required total passengers for level goal based on existing chunks
+
+            int totalAgents = 0;
+            if (data.resolvedLands != null)
+            {
+                foreach (var land in data.resolvedLands)
+                {
+                    foreach (var chunk in land.chunks) totalAgents += chunk.agentCount;
+                }
+            }
+            goalCoins = totalAgents > 0 ? totalAgents : data.levelGoalCoin;
+
             currentCoins = 0;
             timeRemaining = 180f;
-            
+
+
+            if (timerText != null)
+            {
+                int min = Mathf.FloorToInt(timeRemaining / 60F);
+                int sec = Mathf.FloorToInt(timeRemaining - min * 60);
+                timerText.text = string.Format("{0:00}:{1:00}", min, sec);
+            }
+
+
+            if (coinProgressSlider != null) coinProgressSlider.value = 0f;
+            if (coinText != null) coinText.text = $"0 / {goalCoins}";
+
+
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
             if (victoryPanel != null) victoryPanel.SetActive(false);
 
@@ -613,11 +672,13 @@ namespace BusAway.Gameplay
             if (busToStop.TryGetValue(bus, out var originStop))
             {
                 busToStop.Remove(bus);
+                PlaySFX(sfxBusDisappear);
                 bus.gameObject.SetActive(false);   // park & hide at stop
                 SpawnNextBusFromStop(originStop);   // dispatch next bus from that stop
             }
             else
             {
+                PlaySFX(sfxBusDisappear);
                 bus.gameObject.SetActive(false);
             }
         }
@@ -686,33 +747,49 @@ namespace BusAway.Gameplay
 
                     int maxRows = Mathf.CeilToInt(capacity / 2f);
 
-                    Transform vc = bus.busFloor.parent; 
+                    Transform vc = bus.busFloor.parent;
+
 
                     float fz = bus.busWallF != null ? vc.InverseTransformPoint(bus.busWallF.position).z : 2.1f;
                     float bz = bus.busWallB != null ? vc.InverseTransformPoint(bus.busWallB.position).z : -2.1f;
                     float lx = bus.busWallL != null ? vc.InverseTransformPoint(bus.busWallL.position).x : -1.1f;
                     float rx = bus.busWallR != null ? vc.InverseTransformPoint(bus.busWallR.position).x : 1.1f;
 
-                    float totalZ = Mathf.Abs(fz - bz);     
-                    float totalX = Mathf.Abs(lx - rx);     
-                    float cellZ = totalZ / maxRows;        
-                    float cellX = totalX / 2f;             
+                    float totalZ = Mathf.Abs(fz - bz);
 
-                    float centerZ = (fz + bz) * 0.5f;       
-                    float centerX = (lx + rx) * 0.5f;       
+                    float totalX = Mathf.Abs(lx - rx);
+
+                    float cellZ = totalZ / maxRows;
+
+                    float cellX = totalX / 2f;
+
+
+                    float centerZ = (fz + bz) * 0.5f;
+
+                    float centerX = (lx + rx) * 0.5f;
+
 
                     float seatZ = centerZ + totalZ * 0.5f - cellZ * (row + 0.5f);
                     float seatX = (col == 0)
-                        ? centerX - cellX * 0.25f   
-                        : centerX + cellX * 0.25f;  
+                        ? centerX - cellX * 0.25f
+
+                        : centerX + cellX * 0.25f;
+
 
                     Vector3 localSeat = new Vector3(seatX, 0.3f, seatZ);
 
 
                     dummy.transform.SetParent(bus.busFloor.parent, true);
 
-                    PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.25f, PrimeTween.Ease.OutQuad);
-                    PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.25f, PrimeTween.Ease.OutQuad);
+                    // Di chuyển tới ghế với tốc độ vừa phải
+                    PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.5f, PrimeTween.Ease.Linear);
+                    
+                    // Tạo hiệu ứng "nhấp nhô" (hop) để giả lập dáng chạy
+                    PrimeTween.Tween.LocalPositionY(dummy.transform, localSeat.y + 0.2f, 0.125f, PrimeTween.Ease.OutQuad, cycles: 4, cycleMode: CycleMode.Yoyo);
+                    
+                    PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.5f, PrimeTween.Ease.OutQuad);
+                    
+                    PlaySFX(sfxAgentBoard);
 
                     if (bus.sparkBlingVFX != null)
                     {
@@ -739,6 +816,10 @@ namespace BusAway.Gameplay
                 bus.currentPassengerCount += loadAmount;
                 bus.UpdatePassengerLabel(bus.currentPassengerCount, capacity);
 
+                // Triggers winner logic natively per passenger loaded
+
+                AddCoin(loadAmount);
+
                 if (group.agentCount <= 0)
                 {
                     busWaitingQueue.RemoveAt(groupIdx);
@@ -764,10 +845,11 @@ namespace BusAway.Gameplay
             var stops = FindObjectsOfType<BusStopController>();
             if (stops == null || stops.Length == 0 || data.resolvedLands == null) return;
 
+            globalBusColorPool.Clear();
+            stopRemainingCounts.Clear();
+            stopCurrentColors.Clear();
 
-            stopQueues.Clear();
-
-            // Create a queue for each land representing the sequence of buses it requires
+            // 1. Calculate all colors needed based on lands/chunks
             List<Queue<Color>> landBusQueues = new List<Queue<Color>>();
             Dictionary<Color, int> globalColorAccum = new Dictionary<Color, int>();
 
@@ -788,6 +870,7 @@ namespace BusAway.Gameplay
                 landBusQueues.Add(queue);
             }
 
+            // 2. Interleave colors into a flat global pool
             List<Color> orderedBuses = new List<Color>();
             bool addedAny = true;
             while (addedAny)
@@ -796,11 +879,9 @@ namespace BusAway.Gameplay
                 List<int> availableLands = new List<int>();
                 for (int i = 0; i < landBusQueues.Count; i++) if (landBusQueues[i].Count > 0) availableLands.Add(i);
 
-
                 if (availableLands.Count > 0)
                 {
                     addedAny = true;
-                    // Shuffle the availableLands to make the interleaving random but still top-chunk oriented
                     for (int n = 0; n < availableLands.Count; n++)
                     {
                         int r = Random.Range(n, availableLands.Count);
@@ -814,15 +895,17 @@ namespace BusAway.Gameplay
                 }
             }
 
-            // Distribute the ordered buses round-robin across available bus stops
+            globalBusColorPool = orderedBuses;
+
+            // 3. Initialize counts per stop (round-robin distribution of responsibility)
             for (int s = 0; s < stops.Length; s++)
             {
-                stopQueues[stops[s]] = new Queue<Color>();
+                stopRemainingCounts[stops[s]] = 0;
             }
 
-            for (int i = 0; i < orderedBuses.Count; i++)
+            for (int i = 0; i < globalBusColorPool.Count; i++)
             {
-                stopQueues[stops[i % stops.Length]].Enqueue(orderedBuses[i]);
+                stopRemainingCounts[stops[i % stops.Length]]++;
             }
         }
 
@@ -858,31 +941,56 @@ namespace BusAway.Gameplay
 
         private void SpawnNextBusFromStop(BusStopController stop)
         {
-            if (stop == null || !stopQueues.ContainsKey(stop)) return;
-            var queue = stopQueues[stop];
+            if (stop == null || !stopRemainingCounts.ContainsKey(stop)) return;
 
-
-            if (queue.Count == 0)
+            if (stopRemainingCounts[stop] <= 0)
             {
-                // Trạm đã hoàn thành tất cả xe
                 stop.SetNumber(0);
                 return;
             }
 
-            Color nextColor = queue.Dequeue();
+            // Identify colors currently shown on other stops
+            HashSet<Color> activeColors = new HashSet<Color>();
+            foreach (var kvp in stopCurrentColors)
+            {
+                if (kvp.Key != stop) activeColors.Add(kvp.Value);
+            }
+
+            // Find a color in global pool that is NOT active
+            int chosenIdx = -1;
+            for (int i = 0; i < globalBusColorPool.Count; i++)
+            {
+                if (!activeColors.Contains(globalBusColorPool[i]))
+                {
+                    chosenIdx = i;
+                    break;
+                }
+            }
+
+            // If forced to pick a duplicate (all available colors in pool are active elsewhere)
+            if (chosenIdx == -1 && globalBusColorPool.Count > 0)
+            {
+                chosenIdx = 0;
+            }
+
+            if (chosenIdx == -1) return;
+
+            Color nextColor = globalBusColorPool[chosenIdx];
+            globalBusColorPool.RemoveAt(chosenIdx);
+            
+            stopCurrentColors[stop] = nextColor;
+            stopRemainingCounts[stop]--;
+            
             stop.SetColor(nextColor);
+            stop.SetNumber(stopRemainingCounts[stop]);
 
-            // Số trên bảng hiển thị ĐÚNG số lượng xe đang còn xếp hàng bên trong bến chờ xuất phát
-            stop.SetNumber(queue.Count);
-
-            // Spawn the bus ở giữa ngã 3 (hoặc ngẫu nhiên trên loop?)
-            // Để đẹp mắt, có thể randomize nó trên đường main loop, HOẶC ném ngay ở stem của bến
+            // Spawn the bus
             int randIdx = Random.Range(0, mainLoopPath.Count);
             Vector2Int spawnGridPos = mainLoopPath[randIdx];
 
             Transform busRoot = this.transform.Find("BusesRoot");
             GameObject busObj = Instantiate(busPrefab, busRoot);
-            busObj.name = $"Bus_Active_{nextColor.ToString()}_{queue.Count}";
+            busObj.name = $"Bus_Active_{nextColor.ToString()}_{globalBusColorPool.Count}";
             busObj.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
 
 
@@ -890,6 +998,7 @@ namespace BusAway.Gameplay
             worldPos.y = 0.5f;
 
             busObj.transform.position = worldPos;
+            PlaySFX(sfxBusAppear);
 
             // Khởi tạo hướng xoay cho Bus dọc theo đường
             int pathIdx = mainLoopPath.IndexOf(spawnGridPos);
@@ -950,9 +1059,16 @@ namespace BusAway.Gameplay
             if (State != GameState.Playing) return;
 
             currentCoins += amount;
+            PlaySFX(sfxCoinScored);
+
+
+            if (coinProgressSlider != null) coinProgressSlider.value = (float)currentCoins / goalCoins;
+            if (coinText != null) coinText.text = $"{currentCoins} / {goalCoins}";
+
             if (currentCoins >= goalCoins)
             {
                 State = GameState.LevelCleared;
+                PlaySFX(sfxWin);
                 if (victoryPanel != null) victoryPanel.SetActive(true);
                 // Level Clear Logic
                 Debug.Log("<color=green>LEVEL CLEARED!</color>");
@@ -1134,6 +1250,11 @@ namespace BusAway.Gameplay
             UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
         }
 
+        public void ReloadScene()
+        {
+            ReplayLevel();
+        }
+
         public void PlayNextLevel()
         {
             currentLevelIndex++;
@@ -1142,7 +1263,8 @@ namespace BusAway.Gameplay
                 currentLevelIndex = 0; // Loop back
             }
             PlayerPrefs.SetInt("CurrentLevelIndex", currentLevelIndex);
-            
+
+
             UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
         }
 
@@ -1154,9 +1276,11 @@ namespace BusAway.Gameplay
             if (Application.isPlaying) return;
             string folderPath = "Assets/_Features/LevelSystem/Data/Level";
             if (!UnityEditor.AssetDatabase.IsValidFolder(folderPath)) return;
-            
+
+
             string[] guids = UnityEditor.AssetDatabase.FindAssets("t:LevelDesignData", new[] { folderPath });
-            
+
+
             var foundLevels = new List<LevelDesignData>();
             foreach (string guid in guids)
             {
@@ -1167,14 +1291,16 @@ namespace BusAway.Gameplay
                     foundLevels.Add(data);
                 }
             }
-            
+
             // Sort to ensure Level_001 comes before Level_002, and Level_002 before Level_0010
+
             foundLevels.Sort((a, b) =>
             {
                 if (a.name.Length == b.name.Length) return a.name.CompareTo(b.name);
                 return a.name.Length.CompareTo(b.name.Length);
             });
-            
+
+
             levels = foundLevels;
         }
 #endif

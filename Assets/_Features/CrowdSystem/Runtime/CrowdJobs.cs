@@ -63,55 +63,85 @@ namespace BusAway.CrowdSystem
             }
 
             // STATE 1: Boids Mode (Moving to BusWaitZone)
-            float3 desiredVel = float3.zero;
-
-            if (distToTarget > arrivalDistance)
+            float sqrSeparationRadius = separationRadius * separationRadius;
+            // Đám đông tụ tập: giảm ranh giới cá nhân xuống để đứng sát nhau hơn
+            float currentSeparationRadius = separationRadius;
+            if (state == 1)
             {
-                desiredVel = (toTarget / distToTarget) * moveSpeed * targetWeight;
+                currentSeparationRadius = 0.5f; 
+                sqrSeparationRadius = currentSeparationRadius * currentSeparationRadius;
             }
 
-            // Omni-directional Separation logic for Boids clustering
             float3 separationForce = float3.zero;
             int neighborCount = 0;
-            float sqrSeparationRadius = separationRadius * separationRadius;
 
             for (int i = 0; i < activeCount; i++)
             {
                 if (i == index) continue;
 
-                // Chỉ quan tâm boids khác đang di chuyển hoặc cản đường
-                // (Thực tế Boids có thể phớt lờ những người còn ở trong Land nếu muốn, 
-                // nhưng dẹp chung cũng không sao vì bán kính nhỏ)
                 float3 otherPos = allPositions[i];
                 float3 offset = currentPos - otherPos;
                 
                 float sqrDist = math.lengthsq(offset);
 
-                if (sqrDist < sqrSeparationRadius && sqrDist > 0.0001f)
+                if (sqrDist < sqrSeparationRadius)
                 {
+                    if (sqrDist < 0.0001f)
+                    {
+                        offset = new float3(index - i, 0, i - index) * 0.01f;
+                        sqrDist = math.lengthsq(offset);
+                    }
+
                     float dist = math.sqrt(sqrDist);
-                    // Lực đẩy mềm hơn một chút để swarming trong vùng tụ tập
-                    float ratio = 1.0f - (dist / separationRadius);
-                    float forceStrength = ratio * 5.0f; 
+                    // Lực đẩy mềm
+                    float ratio = 1.0f - (dist / currentSeparationRadius);
                     
-                    float3 sepDir = offset / dist; // Omni-directional
-                    separationForce += sepDir * forceStrength;
+                    // QUICK MATHS: Target Force có độ lớn max = 1.0. 
+                    // Để giữ Agent cách nhau một khoảng (vd 0.3m), Lực Đẩy phải lớn hơn 1.0 khi qua mốc 0.3m!
+                    // Nhân ratio với 4.0f: Max đẩy là 4.0. Điểm cân bằng với Target(1.0) là tại ratio=0.25 (cách ~0.37m).
+                    float forceStrength = ratio * 4.0f;
+                    
+                    float3 sepDir = offset / dist;
+                    separationForce += sepDir * forceStrength; 
                     neighborCount++;
                 }
             }
 
-            if (neighborCount > 0)
+            // Mở giới hạn đẩy cự ly gần để chúng luôn có cơ hội hất văng boids khác 
+            // trước khi bị ép bẹp dí vào tường
+            float sepLen = math.length(separationForce);
+            if (sepLen > 5.0f)
             {
-                // Average out the accumulated forces
-                separationForce /= neighborCount;
-                desiredVel += separationForce * moveSpeed * separationWeight;
+                separationForce = (separationForce / sepLen) * 5.0f;
             }
+
+            // Kéo về target
+            float3 seekForce = float3.zero;
+            if (distToTarget > arrivalDistance)
+            {
+                seekForce = toTarget / distToTarget;
+            }
+
+            // Hợp lực
+            float3 steering = (seekForce * targetWeight) + (separationForce * separationWeight);
+            
+            if (math.lengthsq(steering) > 1.0f)
+            {
+                steering = math.normalize(steering);
+            }
+
+            float3 desiredVel = steering * moveSpeed;
 
             // Update velocity and position smoothly
             float3 newVel = math.lerp(currentVel, desiredVel, deltaTime * 10f);
+            
+            // NGHIÊM CẤM DI CHUYỂN TRỤC Y THEO YÊU CẦU: "force trục Y không đc thay đổi pos y"
+            newVel.y = 0f;
             velocities[index] = newVel;
             
             float3 nextPos = currentPos + newVel * deltaTime;
+            nextPos.y = currentPos.y; // Giữ nguyên tọa độ cứng Y ngay từ lúc spawn
+            
             if (constrainToWaitZone && state == 1)
             {
                 nextPos.x = math.clamp(nextPos.x, waitZoneMin.x, waitZoneMax.x);

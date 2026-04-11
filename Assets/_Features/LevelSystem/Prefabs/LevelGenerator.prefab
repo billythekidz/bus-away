@@ -248,10 +248,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BusAway.Gameplay.GameManager
   levelGenerator: {fileID: 3830535819967523841}
+  levels:
+  - {fileID: 11400000, guid: 01eeb63b73ac11c44831c4a43f7d956f, type: 2}
+  - {fileID: 11400000, guid: bf6993dc6758ad544a38a4cf2a82c10e, type: 2}
+  - {fileID: 11400000, guid: 13d2f7f7311c7b14ebc849946cea2cd0, type: 2}
+  - {fileID: 11400000, guid: 09e051f89161561499df7355268b4ecc, type: 2}
+  - {fileID: 11400000, guid: c1c8e1bef83eea64181ad3f345f95559, type: 2}
+  - {fileID: 11400000, guid: f2aac8620d80f1144ab1507834d82b3d, type: 2}
+  - {fileID: 11400000, guid: 04e97a97fc4b397498d9e9d3fbff9a25, type: 2}
+  - {fileID: 11400000, guid: 07cf075c3498124468849781094cf16d, type: 2}
+  - {fileID: 11400000, guid: bd5297824e2e15943b04edd1c22bd7d8, type: 2}
+  - {fileID: 11400000, guid: 1569fb913cdef504889dd3a2c9519c5c, type: 2}
+  currentLevelIndex: 0
   busPrefab: {fileID: 3080435271239930372, guid: 7b7128ae7e23fa142b214edf5ec6acb2, type: 3}
   currentCoins: 0
   goalCoins: 0
   PlayPanel: {fileID: 0}
+  gameOverPanel: {fileID: 0}
+  victoryPanel: {fileID: 0}
+  timerText: {fileID: 0}
+  coinProgressSlider: {fileID: 0}
+  coinText: {fileID: 0}
+  timeRemaining: 180
+  audioSource: {fileID: 0}
+  sfxBusAppear: {fileID: 8300000, guid: 5efc6bfa180275f45b89fcafff0a92cc, type: 3}
+  sfxBusDisappear: {fileID: 8300000, guid: c1a7f04b63e76e5479989b7f8dacca4b, type: 3}
+  sfxCoinScored: {fileID: 8300000, guid: 849b8d1285768a94ea5ddc5d363768ba, type: 3}
+  sfxWin: {fileID: 8300000, guid: 401f79c8fcba9ae4bae64b9a66a02a1d, type: 3}
+  sfxGameOver: {fileID: 8300000, guid: 570770d6d96c3264385d65c280ace878, type: 3}
+  sfxTapLand: {fileID: 8300000, guid: 640c5e96e5a277545b0b6f1602c1bfbf, type: 3}
+  sfxAgentBoard: {fileID: 8300000, guid: ea374b23cddd2a741aedd9f6d0cd7961, type: 3}
   busWaitZone: {fileID: 0}
 --- !u!114 &3830535819967523841
 MonoBehaviour:
