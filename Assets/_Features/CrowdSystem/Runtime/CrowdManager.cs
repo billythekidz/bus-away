@@ -54,6 +54,7 @@ namespace BusAway.CrowdSystem
         private NativeArray<float3> targets;
         private NativeArray<Matrix4x4> matrices;
         private NativeArray<int> states; // 0 = Rigid InLand, 1 = Boiding to BusWaitZone
+        private NativeArray<int> lands; // Which land index the agent belongs to
 
         // Bug #2/#3 Fix: tempPositions stored as a field so we can manually dispose it
         // after the job completes, instead of relying on the removed [DeallocateOnJobCompletion].
@@ -95,6 +96,7 @@ namespace BusAway.CrowdSystem
             targets = new NativeArray<float3>(maxAgents, Allocator.Persistent);
             matrices = new NativeArray<Matrix4x4>(maxAgents, Allocator.Persistent);
             states = new NativeArray<int>(maxAgents, Allocator.Persistent);
+            lands = new NativeArray<int>(maxAgents, Allocator.Persistent);
 
             colors = new Vector4[maxAgents];
             batchMatrices = new Matrix4x4[1023];
@@ -142,6 +144,7 @@ namespace BusAway.CrowdSystem
             if (targets.IsCreated) targets.Dispose();
             if (matrices.IsCreated) matrices.Dispose();
             if (states.IsCreated) states.Dispose();
+            if (lands.IsCreated) lands.Dispose();
         }
 
         private void EnsureInitialized()
@@ -158,7 +161,7 @@ namespace BusAway.CrowdSystem
         /// Spawns a character and returns its tracking index.
         /// Warning: Indices can change if characters are removed.
         /// </summary>
-        public int SpawnCharacter(Vector3 position, Vector3 target, Color color)
+        public int SpawnCharacter(Vector3 position, Vector3 target, Color color, int landIndex)
         {
             EnsureInitialized();
 
@@ -176,6 +179,7 @@ namespace BusAway.CrowdSystem
             velocities[index] = float3.zero;
             targets[index] = target;
             states[index] = 0; // Rigidly set in Land initially
+            lands[index] = landIndex;
             colors[index] = color;
 
             if (spawnMode == SpawnMode.Prefab && agentPrefab != null)
@@ -232,7 +236,7 @@ namespace BusAway.CrowdSystem
 
                 // Target should be their initial position so they stay still at spawn
                 // Moving forward is handled later by DispatchGroupToWaitZone
-                SpawnCharacter(pos, pos, color);
+                SpawnCharacter(pos, pos, color, landIndex);
             }
 
             // Spawn roads under the land
@@ -282,7 +286,7 @@ namespace BusAway.CrowdSystem
         /// Moves a number of agents of a specific color to the BusWaitZone target using Boids (state 1).
         /// Shifts the remaining agents of this color in their land forward simultaneously (rigidly, state 0).
         /// </summary>
-        public void DispatchGroupToWaitZone(Color groupColor, int count, Vector3 waitZonePos, int shiftRows)
+        public void DispatchGroupToWaitZone(int targetLandIndex, Color groupColor, int count, Vector3 waitZonePos, int shiftRows)
         {
             EnsureInitialized();
             crowdJobHandle.Complete();
@@ -290,7 +294,7 @@ namespace BusAway.CrowdSystem
             System.Collections.Generic.List<int> matchingIndices = new System.Collections.Generic.List<int>();
             for (int i = 0; i < activeCount; i++)
             {
-                if (states[i] == 0 && Vector4.Distance(colors[i], groupColor) < 0.05f)
+                if (states[i] == 0 && lands[i] == targetLandIndex && Vector4.Distance(colors[i], groupColor) < 0.05f)
                 {
                     matchingIndices.Add(i);
                 }
@@ -341,6 +345,7 @@ namespace BusAway.CrowdSystem
                 velocities[index] = velocities[lastIndex];
                 targets[index] = targets[lastIndex];
                 states[index] = states[lastIndex];
+                lands[index] = lands[lastIndex];
                 colors[index] = colors[lastIndex];
                 
                 if (spawnMode == SpawnMode.Prefab)
@@ -591,7 +596,7 @@ namespace BusAway.CrowdSystem
                 Vector3 pos = transform.position + new Vector3(UnityEngine.Random.Range(-5f, 5f), 0, UnityEngine.Random.Range(-5f, 5f));
                 Vector3 target = pos + new Vector3(UnityEngine.Random.Range(-10f, 10f), 0, UnityEngine.Random.Range(-10f, 10f));
                 Color col = new Color(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value);
-                SpawnCharacter(pos, target, col);
+                SpawnCharacter(pos, target, col, -1);
             }
         }
 

@@ -57,6 +57,7 @@ namespace BusAway.Gameplay
 
         [Header("Serialize Fields")]
         [SerializeField] private GameObject PlayPanel;
+        [SerializeField] private Transform busWaitZone;
 
         private void Awake()
         {
@@ -99,10 +100,11 @@ namespace BusAway.Gameplay
             if (waitZoneCountText == null)
             {
                 var textObj = new GameObject("WaitZoneText");
-                textObj.transform.position = new Vector3(0, 0.05f, 2f);
+                textObj.transform.position = new Vector3(0, 0.2f, 2.2f);
                 textObj.transform.eulerAngles = new Vector3(90, 180, 0); // Flat on ground, facing flipped camera
                 waitZoneCountText = textObj.AddComponent<TextMeshPro>();
-                waitZoneCountText.fontSize = 6;
+                waitZoneCountText.fontSize = 5;
+                waitZoneCountText.fontStyle = FontStyles.Bold;
                 waitZoneCountText.alignment = TextAlignmentOptions.Center;
             }
 
@@ -210,6 +212,29 @@ namespace BusAway.Gameplay
                         {
                             var activeChunk = group.chunks[chunkIdx];
 
+                            // Determine Z bounds of the active chunk
+                            int startRow = 0;
+                            for (int i = 0; i < chunkIdx; i++)
+                            {
+                                startRow += group.chunks[i].agentCount / 4;
+                            }
+                            int chunkRows = activeChunk.agentCount / 4;
+
+
+                            Vector3 landBase = BusAway.CrowdSystem.CrowdManager.Instance.transform.position + BusAway.CrowdSystem.CrowdManager.Instance.landBaseOffset;
+                            float frontZ = 0.1f;
+                            float agentZ = BusAway.CrowdSystem.CrowdManager.Instance.agentSpacingZ;
+
+                            // +/- 1 row tolerance for easier clicking
+
+                            float minZ = landBase.z + frontZ + (startRow - 1.0f) * agentZ;
+                            float maxZ = landBase.z + frontZ + (startRow + chunkRows + 1.0f) * agentZ;
+
+                            if (hit.point.z < minZ || hit.point.z > maxZ)
+
+                            {
+                                return; // Clicked on the land, but not on the top-most active chunk. Ignored!
+                            }
 
                             int currentWaitCount = 0;
                             foreach (var g in busWaitingQueue) currentWaitCount += g.agentCount;
@@ -227,9 +252,18 @@ namespace BusAway.Gameplay
                             busWaitingQueue.Enqueue(new BusWaitingGroup { color = activeChunk.color, agentCount = activeChunk.agentCount, landIndex = bestLand });
                             Debug.Log($"Queueing Land {bestLand} with {activeChunk.agentCount} agents of color {activeChunk.color}");
 
+                            // Calculate top center edge of busWaitZone (smallest Z)
+                            Vector3 targetWaitPos = new Vector3(0, 0, -2f);
+                            if (busWaitZone != null)
+                            {
+                                // Top boundary corresponds to minimum Z due to 180 deg Y camera rotation
+                                float topEdgeZ = busWaitZone.position.z - (busWaitZone.localScale.z / 2f);
+                                targetWaitPos = new Vector3(busWaitZone.position.x, busWaitZone.position.y, topEdgeZ);
+                            }
+
                             // Dispatch agents visually to Walk Zone / Wait Zone 
                             int shiftRows = activeChunk.agentCount / 4;
-                            BusAway.CrowdSystem.CrowdManager.Instance.DispatchGroupToWaitZone(activeChunk.color, activeChunk.agentCount, new Vector3(0, 0, -2f), shiftRows);
+                            BusAway.CrowdSystem.CrowdManager.Instance.DispatchGroupToWaitZone(bestLand, activeChunk.color, activeChunk.agentCount, targetWaitPos, shiftRows);
 
                             if (landChunkIndices[bestLand] >= group.chunks.Count)
                             {
