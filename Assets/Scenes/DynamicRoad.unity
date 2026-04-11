@@ -20,11 +20,11 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientSkyColor: {r: 0.4, g: 0.42, b: 0.48, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
@@ -3404,7 +3404,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.7735849, g: 0.7735849, b: 0.7735849, a: 0}
+  m_BackGroundColor: {r: 0.85, g: 0.87, b: 0.97, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -3516,11 +3516,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb8357c2cd9ee45429636dc288647c34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BusAway.Gameplay.LevelCameraFramer
-  padding: 4
-  elevationAngle: 55
-  orbitAngle: 0
-  distanceMultiplier: 1.4
-  fieldOfView: 22
+  padding: 0.2
 --- !u!1 &1104263703
 GameObject:
   m_ObjectHideFlags: 0
@@ -4976,7 +4972,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 1
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 1, g: 0.96, b: 0.88, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
@@ -4986,7 +4982,7 @@ Light:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 1
+    m_Strength: 0.6
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
@@ -7829,6 +7825,14 @@ PrefabInstance:
     - target: {fileID: 1139479779292454085, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3830535819967523841, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
+      propertyPath: cameraFramer
+      value: 
+      objectReference: {fileID: 1073318903}
+    - target: {fileID: 3830535819967523841, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
+      propertyPath: autoFrameCameraOnBuild
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4003766518296069692, guid: 25f1e7b35feb63a408ade80ac97c5aea, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'

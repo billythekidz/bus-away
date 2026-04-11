@@ -783,13 +783,23 @@ namespace BusAway.Gameplay
 
                     dummy.transform.SetParent(bus.busFloor.parent, true);
 
-                    // Di chuyển tới ghế với tốc độ vừa phải
-                    PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.5f, PrimeTween.Ease.Linear);
-                    
-                    // Tạo hiệu ứng "nhấp nhô" (hop) để giả lập dáng chạy
-                    PrimeTween.Tween.LocalPositionY(dummy.transform, localSeat.y + 0.2f, 0.125f, PrimeTween.Ease.OutQuad, cycles: 4, cycleMode: PrimeTween.CycleMode.Yoyo);
-                    
-                    PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.5f, PrimeTween.Ease.OutQuad);
+                    float moveDuration = 0.8f; // Tận dụng duration chậm hơn để người chơi thấy rõ
+                    Vector3 startPosLocal = dummy.transform.localPosition;
+
+                    // Dùng Custom Tween để lerp 3 trục đồng thời, và cộng thêm offset Y hình sin (giả lập 4 bước nhấp nhô)
+                    PrimeTween.Tween.Custom(0f, 1f, moveDuration, onValueChange: t =>
+                    {
+                        if (dummy != null)
+                        {
+                            Vector3 currentPos = Vector3.Lerp(startPosLocal, localSeat, t);
+                            // Tạo 4 nhịp sóng nhảy (hop): t * PI * 4
+                            float hopOffset = Mathf.Abs(Mathf.Sin(t * Mathf.PI * 4f)) * 0.4f;
+                            currentPos.y += hopOffset;
+                            dummy.transform.localPosition = currentPos;
+                        }
+                    }, ease: PrimeTween.Ease.Linear);
+
+                    PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, moveDuration, PrimeTween.Ease.OutQuad);
                     
                     PlaySFX(sfxAgentBoard);
 
@@ -805,8 +815,7 @@ namespace BusAway.Gameplay
 
                     HapticFeedback.Medium();
 
-
-                    yield return new WaitForSeconds(0.05f);
+                    yield return new WaitForSeconds(0.12f);
                 }
 
                 if (agentPositions.Count > 0)

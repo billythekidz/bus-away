@@ -3,9 +3,8 @@ using UnityEngine;
 namespace BusAway.Gameplay
 {
     /// <summary>
-    /// Automatically frames the camera to show the entire level from an isometric 3D perspective.
-    /// Calculates combined bounds of all renderers under the roads root and positions the camera
-    /// at a configurable elevation angle looking at the center.
+    /// Automatically adjusts the camera FOV to fit the entire level from its fixed position.
+    /// Calculates combined bounds of all renderers under the roads root and finds the optimal FOV.
     /// </summary>
     public class LevelCameraFramer : MonoBehaviour
     {
@@ -13,23 +12,9 @@ namespace BusAway.Gameplay
         [Tooltip("Extra margin around the level bounds to prevent clipping at screen edges")]
         public float padding = 4f;
 
-        [Tooltip("Elevation angle in degrees (0 = ground level, 90 = top-down)")]
-        [Range(20f, 85f)]
-        public float elevationAngle = 55f;
-
-        [Tooltip("Horizontal orbit angle in degrees (0 = looking from +Z towards -Z)")]
-        public float orbitAngle = 0f;
-
-        [Tooltip("Extra distance multiplier to pull the camera back")]
-        [Range(1f, 3f)]
-        public float distanceMultiplier = 1.4f;
-
-        [Tooltip("Camera field of view for perspective mode (lower = flatter, more orthographic feel)")]
-        public float fieldOfView = 22f;
-
         /// <summary>
-        /// Frame the camera to show all 3D geometry within the specified root transform.
-        /// Uses Renderer bounds (works with Cubes, Cylinders, MeshRenderers, etc.)
+        /// Adjusts the camera FOV to show all 3D geometry within the specified root transform,
+        /// keeping its current position and rotation intact.
         /// </summary>
         public void FrameLevel(Transform roadsRoot)
         {
@@ -41,7 +26,7 @@ namespace BusAway.Gameplay
 
             Camera cam = Camera.main;
 
-            // 1. Gather all Renderers (Cubes, Cylinders, MeshRenderers, etc.)
+            // 1. Gather all Renderers
             Renderer[] renderers = roadsRoot.GetComponentsInChildren<Renderer>();
             if (renderers.Length == 0)
             {
@@ -56,35 +41,52 @@ namespace BusAway.Gameplay
                 totalBounds.Encapsulate(r.bounds);
             }
 
-            // 3. Calculate required camera distance to fit everything
+            // Apply padding to bounds
+            totalBounds.Expand(padding);
+
+            // 3. Get 8 corners of the bounding box
             Vector3 center = totalBounds.center;
-            float boundsSize = Mathf.Max(totalBounds.size.x, totalBounds.size.z) + padding;
+            Vector3 extents = totalBounds.extents;
+            Vector3[] corners = new Vector3[8];
+            corners[0] = center + new Vector3(-extents.x, -extents.y, -extents.z);
+            corners[1] = center + new Vector3(extents.x, -extents.y, -extents.z);
+            corners[2] = center + new Vector3(-extents.x, extents.y, -extents.z);
+            corners[3] = center + new Vector3(extents.x, extents.y, -extents.z);
+            corners[4] = center + new Vector3(-extents.x, -extents.y, extents.z);
+            corners[5] = center + new Vector3(extents.x, -extents.y, extents.z);
+            corners[6] = center + new Vector3(-extents.x, extents.y, extents.z);
+            corners[7] = center + new Vector3(extents.x, extents.y, extents.z);
 
-            // Use Perspective projection for true 3D look
-            cam.orthographic = false;
-            cam.fieldOfView = fieldOfView;
+            // 4. Transform to camera local space and calculate max required tangent angles
+            float maxTan = 0f;
+            foreach (Vector3 corner in corners)
+            {
+                Vector3 localPos = cam.transform.InverseTransformPoint(corner);
+                // Ensure the corner is in front of the camera to avoid negative/zero division
+                if (localPos.z <= 0.01f)
+                {
+                    continue; // Skip calculating FOV for point behind or too close
+                }
 
-            // Calculate distance needed to fit the bounds in view
-            float halfFov = cam.fieldOfView * 0.5f * Mathf.Deg2Rad;
-            float distance = (boundsSize * 0.5f) / Mathf.Tan(halfFov);
-            distance *= distanceMultiplier;
+                // Required vertical tan for this point's Y distance
+                float tanY = Mathf.Abs(localPos.y) / localPos.z;
+                
+                // Required vertical tan for this point's X distance, accounting for screen aspect ratio
+                float tanX = (Mathf.Abs(localPos.x) / localPos.z) / cam.aspect;
 
-            // 4. Position camera at elevation + orbit angle
-            float elevRad = elevationAngle * Mathf.Deg2Rad;
-            float orbitRad = orbitAngle * Mathf.Deg2Rad;
+                maxTan = Mathf.Max(maxTan, tanY, tanX);
+            }
 
-            Vector3 cameraOffset = new Vector3(
-                Mathf.Sin(orbitRad) * Mathf.Cos(elevRad) * distance,
-                Mathf.Sin(elevRad) * distance,
-                Mathf.Cos(orbitRad) * Mathf.Cos(elevRad) * distance
-            );
-
-            cam.transform.position = center + cameraOffset;
-
-            // 5. Look at the center of the level
-            cam.transform.LookAt(center);
-
-            Debug.Log($"<color=green>[LevelCameraFramer]</color> 3D Isometric framing complete. Distance: {distance:F1}, Center: {center}");
+            if (maxTan > 0)
+            {
+                cam.orthographic = false;
+                cam.fieldOfView = 2f * Mathf.Atan(maxTan) * Mathf.Rad2Deg;
+                Debug.Log($"<color=green>[LevelCameraFramer]</color> FOV adjusted to: {cam.fieldOfView:F1}");
+            }
+            else
+            {
+                Debug.LogWarning("[LevelCameraFramer] Could not calculate FOV. Camera might be inside the map bounds or looking away.");
+            }
         }
     }
 }

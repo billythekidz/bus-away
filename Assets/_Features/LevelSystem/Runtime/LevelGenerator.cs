@@ -58,7 +58,7 @@ namespace BusAway.Gameplay
         [Header("Buses")]
         public GameObject busPrefab;
 
-        [Header("Auto Framing")]
+        [Header("Camera Framing")]
         public bool autoFrameCameraOnBuild = true;
         public LevelCameraFramer cameraFramer;
 
@@ -363,7 +363,7 @@ namespace BusAway.Gameplay
 
             int totalBuses = activeLevelData.busStopLength * activeLevelData.busesPerStop;
             var busColorAlloc = new System.Collections.Generic.List<Color>();
-            for(int i = 0; i < totalBuses; i++)
+            for (int i = 0; i < totalBuses; i++)
             {
                 busColorAlloc.Add(palette[i % palette.Count]);
             }
