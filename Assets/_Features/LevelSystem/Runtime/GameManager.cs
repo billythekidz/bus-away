@@ -505,38 +505,91 @@ namespace BusAway.Gameplay
         private void OnBusArrivedAtLoadingZone(BusMovement.BusController bus)
         {
             bus.OnPathComplete -= OnBusArrivedAtLoadingZone;
+
+            Vector2Int currentGridPos = WorldToGrid(bus.transform.position);
+            bus.previousGridPos = bus.currentGridPos;
+            bus.currentGridPos = currentGridPos;
+
             StartCoroutine(LoadPassengersCoroutine(bus));
         }
 
         private IEnumerator LoadPassengersCoroutine(BusMovement.BusController bus)
         {
-            Debug.Log($"Bus {bus.busColor} arrived at Loading Zone. Boarding passengers...");
-            yield return new WaitForSeconds(1.5f); // Simulate boarding time
-
-            if (busWaitingQueue.Count > 0)
+            while (bus.currentPassengerCount < levelGenerator.activeLevelData.agentsPerBus && busWaitingQueue.Count > 0)
             {
                 var group = busWaitingQueue.Peek();
-                if (group.color == bus.busColor)
+                if (group.color != bus.busColor)
                 {
-                    int spaceAvailable = levelGenerator.activeLevelData.agentsPerBus - bus.currentPassengerCount;
-                    int loadAmount = Mathf.Min(spaceAvailable, group.agentCount);
+                    break; // Queue head is not our color, stop loading
+                }
 
+                int spaceAvailable = levelGenerator.activeLevelData.agentsPerBus - bus.currentPassengerCount;
+                int loadAmount = Mathf.Min(spaceAvailable, group.agentCount);
 
-                    group.agentCount -= loadAmount;
-                    bus.currentPassengerCount += loadAmount;
+                var agentPositions = BusAway.CrowdSystem.CrowdManager.Instance.ExtractWaitZoneAgents(bus.busColor, loadAmount);
+                
+                for (int i = 0; i < agentPositions.Count; i++)
+                {
+                    var startPos = agentPositions[i];
+                    
+                    GameObject dummy = Instantiate(BusAway.CrowdSystem.CrowdManager.Instance.agentPrefab);
+                    dummy.transform.position = startPos;
+                    
+                    var renderers = dummy.GetComponentsInChildren<Renderer>(true);
+                    MaterialPropertyBlock mb = new MaterialPropertyBlock();
+                    mb.SetColor("_BaseColor", bus.busColor);
+                    foreach(var r in renderers) r.SetPropertyBlock(mb);
 
+                    int currentSlot = bus.currentPassengerCount + i;
+                    int col = currentSlot % 2;
+                    int row = currentSlot / 2;
+                    
+                    int maxCapacity = levelGenerator.activeLevelData.agentsPerBus;
+                    int maxRows = Mathf.CeilToInt(maxCapacity / 2f);
+                    
+                    float frontZ = 0.35f;   // Vị trí đầu xe (bên trong thùng)
+                    float backZ = -0.55f;   // Vị trí cuối xe (bên trong thùng)
+                    float rowSpacing = maxRows <= 1 ? 0f : (frontZ - backZ) / (maxRows - 1);
+                    // Giới hạn spacing tối đa để không bị thưa nếu ít người
+                    rowSpacing = Mathf.Min(rowSpacing, 0.45f); 
+                    
+                    float seatX = (col == 0) ? -0.25f : 0.25f;
+                    float seatZ = frontZ - row * rowSpacing;
+                    Vector3 localSeat = new Vector3(seatX, 0.25f, seatZ);
+                    
+                    dummy.transform.SetParent(bus.busFloor.parent, true);
+                    
+                    PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.25f, PrimeTween.Ease.OutQuad);
+                    PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.25f, PrimeTween.Ease.OutQuad);
+                    
+                    yield return new WaitForSeconds(0.05f);
+                }
 
-                    if (group.agentCount <= 0)
-                    {
-                        busWaitingQueue.Dequeue();
-                    }
+                if (agentPositions.Count > 0)
+                {
+                    yield return new WaitForSeconds(0.25f);
+                }
+
+                group.agentCount -= loadAmount;
+                bus.currentPassengerCount += loadAmount;
+
+                if (group.agentCount <= 0)
+                {
+                    busWaitingQueue.Dequeue();
                 }
             }
 
             busToLoadingZone.Remove(bus);
-            bus.currentGridPos = WorldToGrid(bus.transform.position);
+            bus.OnPathComplete -= OnBusPathComplete;
+            bus.OnPathComplete += OnBusPathComplete;
 
-            OnBusPathComplete(bus);
+            if (!TryMoveBus(bus))
+            {
+                if (!waitingToMoveBuses.Contains(bus))
+                {
+                    waitingToMoveBuses.Add(bus);
+                }
+            }
         }
 
         private void SetupBusStops(LevelDesignData data)
@@ -750,12 +803,25 @@ namespace BusAway.Gameplay
             loadingZoneTiles.Clear();
 
             int bottomY = data.gridHeight - 1;
+            int centerX = data.gridWidth / 2;
+            int bestX = -1;
+            int minDistance = 9999;
+
             for (int x = 0; x < data.gridWidth; x++)
             {
                 if (data.GetCell(x, bottomY) == RoadCellType.Straight_EW)
                 {
-                    loadingZoneTiles.Add(new Vector2Int(x, bottomY));
+                    int dist = Mathf.Abs(x - centerX);
+                    if (dist < minDistance)
+                    {
+                        minDistance = dist;
+                        bestX = x;
+                    }
                 }
+            }
+            if (bestX != -1)
+            {
+                loadingZoneTiles.Add(new Vector2Int(bestX, bottomY));
             }
 
             // Find stems

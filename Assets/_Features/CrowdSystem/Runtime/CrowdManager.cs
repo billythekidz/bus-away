@@ -291,31 +291,36 @@ namespace BusAway.CrowdSystem
             EnsureInitialized();
             crowdJobHandle.Complete();
 
-            System.Collections.Generic.List<int> matchingIndices = new System.Collections.Generic.List<int>();
+            System.Collections.Generic.List<int> groupColorIndices = new System.Collections.Generic.List<int>();
             for (int i = 0; i < activeCount; i++)
             {
                 if (states[i] == 0 && lands[i] == targetLandIndex && Vector4.Distance(colors[i], groupColor) < 0.05f)
                 {
-                    matchingIndices.Add(i);
+                    groupColorIndices.Add(i);
                 }
             }
 
             // front is now the smallest Z (top of the screen)
-            matchingIndices.Sort((a, b) => positions[a].z.CompareTo(positions[b].z));
+            groupColorIndices.Sort((a, b) => positions[a].z.CompareTo(positions[b].z));
 
-            for (int i = 0; i < matchingIndices.Count; i++)
+            HashSet<int> dispatchedSet = new HashSet<int>();
+            for (int i = 0; i < groupColorIndices.Count; i++)
             {
-                int agentIdx = matchingIndices[i];
                 if (i < count)
                 {
-                    // Phát lệnh đi ra BusWaitZone, bật chế độ Boids
+                    int agentIdx = groupColorIndices[i];
                     states[agentIdx] = 1; 
                     targets[agentIdx] = waitZonePos;
+                    dispatchedSet.Add(agentIdx);
                 }
-                else
+            }
+
+            // Shift ALL OTHER remaining agents in this land forward (up the screen -> subtract Z)
+            for (int i = 0; i < activeCount; i++)
+            {
+                if (states[i] == 0 && lands[i] == targetLandIndex && !dispatchedSet.Contains(i))
                 {
-                    // Shift remaining agents forward (up the screen -> subtract Z)
-                    targets[agentIdx] = targets[agentIdx] - new float3(0, 0, shiftRows * agentSpacingZ);
+                    targets[i] = targets[i] - new float3(0, 0, shiftRows * agentSpacingZ);
                 }
             }
         }
@@ -445,6 +450,27 @@ namespace BusAway.CrowdSystem
             return result;
         }
 
+        /// <summary>
+        /// Extracts a number of waiting agents (state == 1) of the given color, returning their world positions.
+        /// The agents are removed from the CrowdManager.
+        /// </summary>
+        public List<Vector3> ExtractWaitZoneAgents(Color groupColor, int count)
+        {
+            EnsureInitialized();
+            crowdJobHandle.Complete();
+
+            List<Vector3> results = new List<Vector3>();
+            for (int i = activeCount - 1; i >= 0 && results.Count < count; i--)
+            {
+                if (states[i] == 1 && Vector4.Distance(colors[i], groupColor) < 0.05f)
+                {
+                    results.Add(positions[i]);
+                    RemoveCharacter(i);
+                }
+            }
+
+            return results;
+        }
         private void Update()
         {
             EnsureInitialized();

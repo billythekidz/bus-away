@@ -857,7 +857,7 @@ MonoBehaviour:
   spawnMode: 0
   maxAgents: 1000
   moveSpeed: 3
-  separationRadius: 0.3
+  separationRadius: 0.5
   separationWeight: 1
   targetWeight: 1
   arrivalDistance: 0.05
