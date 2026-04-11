@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08fed8f831812b743a953bc8785b0157, type: 3}
+  m_Name: Level_002
+  m_EditorClassIdentifier: Assembly-CSharp::BusAway.Level.LevelDesignData
+  gridWidth: 8
+  gridHeight: 6
+  enforcePerfectLoop: 1
+  grid: 00000000000000000300000002000000020000000200000004000000000000000000000003000000060000000000000000000000000000000e000000150000000000000001000000000000000000000000000000000000000d0000001500000000000000050000000400000000000000000000000300000006000000000000000000000000000000050000000b0000000c0000000600000000000000000000000000000000000000000000001400000014000000000000000000000000000000
+  levelGoalCoin: 160
+  busStopLength: 2
+  buses: []
+  passengerQueueOrder: []
+  busesPerStop: 3
+  agentsPerBus: 32
+  minChunkSize: 8
+  maxChunkSize: 32
+  landCount: 3
+  landColorPalette:
+  - {r: 0, g: 0.95960426, b: 1, a: 1}
+  - {r: 0, g: 1, b: 0.21875882, a: 1}
+  - {r: 1, g: 0.8489028, b: 0, a: 1}
+  resolvedLands:
+  - chunks:
+    - agentCount: 28
+      color: {r: 0, g: 1, b: 0.21875882, a: 1}
+    - agentCount: 16
+      color: {r: 0, g: 0.95960426, b: 1, a: 1}
+    - agentCount: 12
+      color: {r: 0, g: 1, b: 0.21875882, a: 1}
+    - agentCount: 16
+      color: {r: 1, g: 0.8489028, b: 0, a: 1}
+  - chunks:
+    - agentCount: 24
+      color: {r: 0, g: 1, b: 0.21875882, a: 1}
+    - agentCount: 32
+      color: {r: 0, g: 0.95960426, b: 1, a: 1}
+    - agentCount: 16
+      color: {r: 1, g: 0.8489028, b: 0, a: 1}
+  - chunks:
+    - agentCount: 16
+      color: {r: 0, g: 0.95960426, b: 1, a: 1}
+    - agentCount: 8
+      color: {r: 1, g: 0.8489028, b: 0, a: 1}
+    - agentCount: 24
+      color: {r: 1, g: 0.8489028, b: 0, a: 1}

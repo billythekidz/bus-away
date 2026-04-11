@@ -490,6 +490,25 @@ namespace BusAway.CrowdSystem
             tempPositions = new NativeArray<float3>(activeCount, Allocator.TempJob);
             NativeArray<float3>.Copy(positions, tempPositions, activeCount);
 
+            float3 waitZoneMin = float3.zero;
+            float3 waitZoneMax = float3.zero;
+            bool constrainToWaitZone = false;
+            
+            // Find manually to avoid Assembly Def CS0234 (CrowdSystem -> LevelSystem cross-dependency limit)
+            GameObject waitZoneObj = GameObject.Find("BusWaitZone");
+            if (waitZoneObj != null)
+            {
+                var road = waitZoneObj.transform.Find("Road");
+                if (road != null && road.TryGetComponent<Renderer>(out var renderer))
+                {
+                    var bounds = renderer.bounds;
+                    // Provide a small margin so they don't exactly clip the edges visually
+                    waitZoneMin = new float3(bounds.min.x + 0.2f, bounds.min.y, bounds.min.z + 0.2f);
+                    waitZoneMax = new float3(bounds.max.x - 0.2f, bounds.max.y, bounds.max.z - 0.2f);
+                    constrainToWaitZone = true;
+                }
+            }
+
             // 3. Schedule Movement Job for activeCount agents
             var movementJob = new CrowdMovementJob
             {
@@ -500,6 +519,9 @@ namespace BusAway.CrowdSystem
                 targetWeight = targetWeight,
                 arrivalDistance = arrivalDistance,
                 activeCount = activeCount,
+                waitZoneMin = waitZoneMin,
+                waitZoneMax = waitZoneMax,
+                constrainToWaitZone = constrainToWaitZone,
                 targets = targets,
                 allPositions = tempPositions, // Read-only snapshot; disposed manually next frame
                 positions = positions,
@@ -514,6 +536,7 @@ namespace BusAway.CrowdSystem
             {
                 positions = positions,
                 velocities = velocities,
+                states = states,
                 matrices = matrices
             };
 

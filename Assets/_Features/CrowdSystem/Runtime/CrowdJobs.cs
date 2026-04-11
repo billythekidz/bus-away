@@ -17,6 +17,10 @@ namespace BusAway.CrowdSystem
         public float arrivalDistance;
         public int activeCount;
 
+        public float3 waitZoneMin;
+        public float3 waitZoneMax;
+        public bool constrainToWaitZone;
+
         [ReadOnly] public NativeArray<float3> targets;
         // Bug #2 Fix: Removed deprecated [DeallocateOnJobCompletion] attribute.
         // This attribute was removed in com.unity.collections@2.x.
@@ -106,7 +110,14 @@ namespace BusAway.CrowdSystem
             // Update velocity and position smoothly
             float3 newVel = math.lerp(currentVel, desiredVel, deltaTime * 10f);
             velocities[index] = newVel;
-            positions[index] = currentPos + newVel * deltaTime;
+            
+            float3 nextPos = currentPos + newVel * deltaTime;
+            if (constrainToWaitZone && state == 1)
+            {
+                nextPos.x = math.clamp(nextPos.x, waitZoneMin.x, waitZoneMax.x);
+                nextPos.z = math.clamp(nextPos.z, waitZoneMin.z, waitZoneMax.z);
+            }
+            positions[index] = nextPos;
         }
     }
 
@@ -115,6 +126,7 @@ namespace BusAway.CrowdSystem
     {
         [ReadOnly] public NativeArray<float3> positions;
         [ReadOnly] public NativeArray<float3> velocities;
+        [ReadOnly] public NativeArray<int> states;
         
         // Matrix mapping to unity's space
         public NativeArray<Matrix4x4> matrices;
@@ -123,16 +135,26 @@ namespace BusAway.CrowdSystem
         {
             float3 pos = positions[index];
             float3 vel = velocities[index];
+            int state = states[index];
 
-            // Calculate rotation facing velocity
             quaternion rot = quaternion.identity;
-            if (math.lengthsq(vel) > 0.001f)
+
+            if (state == 1)
             {
-                // We keep Y flat
-                float3 flatVel = new float3(vel.x, 0, vel.z);
-                if (math.lengthsq(flatVel) > 0.001f)
+                // Force agents to strictly face the road (negative Z) without ANY rotation from velocity.
+                // This guarantees no jittering, spinning, or tilting.
+                rot = quaternion.LookRotationSafe(new float3(0, 0, -1), new float3(0, 1, 0));
+            }
+            else
+            {
+                if (math.lengthsq(vel) > 0.001f)
                 {
-                    rot = quaternion.LookRotationSafe(flatVel, new float3(0, 1, 0));
+                    // We keep Y flat
+                    float3 flatVel = new float3(vel.x, 0, vel.z);
+                    if (math.lengthsq(flatVel) > 0.001f)
+                    {
+                        rot = quaternion.LookRotationSafe(flatVel, new float3(0, 1, 0));
+                    }
                 }
             }
 

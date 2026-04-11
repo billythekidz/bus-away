@@ -259,6 +259,7 @@ namespace BusAway.LevelEditor
                     data.grid[i] = RoadCellType.Empty;
 
                 // Start with a small base loop at the bottom (y=0) to guarantee a boarding area
+                // We reserve a 1-cell margin around the TOP, LEFT, and RIGHT grid edges to allow bus stops to spawn pointing outwards.
                 int minX, maxX;
                 if (data.gridWidth % 2 == 0)
                 {
@@ -272,12 +273,12 @@ namespace BusAway.LevelEditor
                 }
 
                 // Ensure bounds are safe (just in case grid is very small)
-                if (minX < 0) minX = 0;
-                if (maxX >= data.gridWidth) maxX = data.gridWidth - 1;
+                if (minX < 1) minX = 1;
+                if (maxX >= data.gridWidth - 1) maxX = data.gridWidth - 2;
 
                 int minY = 0;
                 int maxY = 2; // small height to allow upwards expansion
-                if (maxY >= data.gridHeight) maxY = data.gridHeight - 1;
+                if (maxY >= data.gridHeight - 1) maxY = data.gridHeight - 2;
 
                 for (int x = minX; x <= maxX; x++)
                 {
@@ -524,7 +525,7 @@ namespace BusAway.LevelEditor
 
             foreach (var (cx, cy) in edgeCells)
             {
-                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                if (cx < 1 || cx >= data.gridWidth - 1 || cy < 0 || cy >= data.gridHeight - 1) return false;
                 if (IsProtectedBoardingArea(cx, cy, data.gridWidth)) return false;
                 if (data.GetCell(cx, cy) != RoadCellType.GenericRoad) return false;
                 if (horizontal && (data.GetCell(cx, cy - 1) != RoadCellType.Empty || data.GetCell(cx, cy + 1) != RoadCellType.Empty)) return false;
@@ -532,7 +533,7 @@ namespace BusAway.LevelEditor
             }
             foreach (var (cx, cy) in notchCells)
             {
-                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                if (cx < 1 || cx >= data.gridWidth - 1 || cy < 0 || cy >= data.gridHeight - 1) return false;
                 if (data.GetCell(cx, cy) != RoadCellType.Empty) return false;
             }
 
@@ -587,7 +588,7 @@ namespace BusAway.LevelEditor
 
             foreach (var (cx, cy) in removeCells)
             {
-                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                if (cx < 1 || cx >= data.gridWidth - 1 || cy < 0 || cy >= data.gridHeight - 1) return false;
                 if (IsProtectedBoardingArea(cx, cy, data.gridWidth)) return false;
                 if (data.GetCell(cx, cy) != RoadCellType.GenericRoad) return false;
                 if (horizontal && (data.GetCell(cx, cy - 1) != RoadCellType.Empty || data.GetCell(cx, cy + 1) != RoadCellType.Empty)) return false;
@@ -595,7 +596,7 @@ namespace BusAway.LevelEditor
             }
             foreach (var (cx, cy) in newCells)
             {
-                if (cx < 0 || cx >= data.gridWidth || cy < 0 || cy >= data.gridHeight) return false;
+                if (cx < 1 || cx >= data.gridWidth - 1 || cy < 0 || cy >= data.gridHeight - 1) return false;
                 if (data.GetCell(cx, cy) != RoadCellType.Empty) return false;
             }
 
