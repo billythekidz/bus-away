@@ -226,9 +226,9 @@ namespace BusAway.CrowdSystem
                 // Target is at the very front for this specific column
                 Vector3 targetPos = landCenter + new Vector3(localX, 0, frontZ);
 
-                // Spawn positions are arrayed backwards from the target
-                // frontZ là ở trên cùng, nên row càng lớn thì Z càng phải LÙI LẠI (trừ đi)
-                Vector3 pos = targetPos - new Vector3(0, 0, row * agentSpacingZ);
+                // Spawn positions are arrayed forward along positive Z
+                // This makes the pivot at the top (smaller Z) and overflow at the bottom (larger Z)
+                Vector3 pos = targetPos + new Vector3(0, 0, row * agentSpacingZ);
 
                 // Target should be their initial position so they stay still at spawn
                 // Moving forward is handled later by DispatchGroupToWaitZone
@@ -265,8 +265,8 @@ namespace BusAway.CrowdSystem
                 for (int p = 0; p < roadPieces; p++)
                 {
                     GameObject rw = Instantiate(roadPrefab, roadGroup.transform);
-                    // Place it progressively downwards along negative Z
-                    rw.transform.position = new Vector3(landCenter.x, 0, landCenter.z + 0.4f - p * tSize - tSize / 2f);
+                    // Place it progressively downwards along positive Z
+                    rw.transform.position = new Vector3(landCenter.x, 0, landCenter.z + 0.4f + p * tSize + tSize / 2f);
                 }
             }
 
@@ -296,8 +296,8 @@ namespace BusAway.CrowdSystem
                 }
             }
 
-            // Mặc định front là Z lớn nhất (ở trên cùng), sort giảm dần
-            matchingIndices.Sort((a, b) => positions[b].z.CompareTo(positions[a].z));
+            // front is now the smallest Z (top of the screen)
+            matchingIndices.Sort((a, b) => positions[a].z.CompareTo(positions[b].z));
 
             for (int i = 0; i < matchingIndices.Count; i++)
             {
@@ -310,8 +310,8 @@ namespace BusAway.CrowdSystem
                 }
                 else
                 {
-                    // Lực lượng còn lại trong Land nhích dần lên (đồng loạt tịnh tiến) theo rigid movement
-                    targets[agentIdx] = targets[agentIdx] + new float3(0, 0, shiftRows * agentSpacingZ);
+                    // Shift remaining agents forward (up the screen -> subtract Z)
+                    targets[agentIdx] = targets[agentIdx] - new float3(0, 0, shiftRows * agentSpacingZ);
                 }
             }
         }
