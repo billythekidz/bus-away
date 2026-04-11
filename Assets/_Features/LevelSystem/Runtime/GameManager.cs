@@ -34,7 +34,6 @@ namespace BusAway.Gameplay
         public int goalCoins = 0;
 
         private List<Vector2Int> mainLoopPath = new List<Vector2Int>();
-        private List<Vector2Int> mainLoopPath = new List<Vector2Int>();
         private List<Color> globalBusColorPool = new List<Color>();
         private Dictionary<BusStopController, int> stopRemainingCounts = new Dictionary<BusStopController, int>();
         private Dictionary<BusStopController, Color> stopCurrentColors = new Dictionary<BusStopController, Color>();
@@ -124,18 +123,20 @@ namespace BusAway.Gameplay
 
         private void Update()
         {
-
-            if (State != GameState.Playing) return;
-
-            timeRemaining -= Time.deltaTime;
-            if (timeRemaining <= 0)
+            if (State == GameState.Playing)
             {
-                timeRemaining = 0;
-                State = GameState.GameOver;
-                PlaySFX(sfxGameOver);
-                if (gameOverPanel != null) gameOverPanel.SetActive(true);
-                Debug.Log("<color=red>GAME OVER: Time out!</color>");
+                timeRemaining -= Time.deltaTime;
+                if (timeRemaining <= 0)
+                {
+                    timeRemaining = 0;
+                    State = GameState.GameOver;
+                    PlaySFX(sfxGameOver);
+                    if (gameOverPanel != null) gameOverPanel.SetActive(true);
+                    Debug.Log("<color=red>GAME OVER: Time out!</color>");
+                }
             }
+
+            if (State != GameState.Playing && State != GameState.LevelCleared) return;
 
             if (timerText != null)
             {
@@ -144,7 +145,8 @@ namespace BusAway.Gameplay
                 timerText.text = string.Format("{0:00}:{1:00}", min, sec);
             }
 
-            HandleInput();
+            if (State == GameState.Playing) HandleInput();
+
             ProcessLoadingZones();
             ProcessWaitingBuses();
             UpdateWaitZoneText();
@@ -535,7 +537,7 @@ namespace BusAway.Gameplay
 
         private void OnBusPathComplete(BusMovement.BusController bus)
         {
-            if (State != GameState.Playing) return;
+            if (State != GameState.Playing && State != GameState.LevelCleared) return;
 
             Vector2Int currentGridPos = WorldToGrid(bus.transform.position);
             bus.previousGridPos = bus.currentGridPos;
@@ -553,7 +555,7 @@ namespace BusAway.Gameplay
         private bool TryMoveBus(BusMovement.BusController bus)
         {
             int capacity = levelGenerator.activeLevelData.agentsPerBus;
-            bool isFull = bus.currentPassengerCount >= capacity;
+            bool isFull = bus.currentPassengerCount >= capacity || State == GameState.LevelCleared;
 
             Vector2Int nextPos = new Vector2Int(-1, -1);
 
@@ -785,7 +787,7 @@ namespace BusAway.Gameplay
                     PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.5f, PrimeTween.Ease.Linear);
                     
                     // Tạo hiệu ứng "nhấp nhô" (hop) để giả lập dáng chạy
-                    PrimeTween.Tween.LocalPositionY(dummy.transform, localSeat.y + 0.2f, 0.125f, PrimeTween.Ease.OutQuad, cycles: 4, cycleMode: CycleMode.Yoyo);
+                    PrimeTween.Tween.LocalPositionY(dummy.transform, localSeat.y + 0.2f, 0.125f, PrimeTween.Ease.OutQuad, cycles: 4, cycleMode: PrimeTween.CycleMode.Yoyo);
                     
                     PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.5f, PrimeTween.Ease.OutQuad);
                     

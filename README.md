@@ -98,6 +98,18 @@ To illustrate how we bridged the gap between AI logic and manual 3D asset creati
 
 ---
 
+## 📅 Project Timeline & Evolution
+
+The development process of **Bus Away** is chronologically documented and divided into three major milestones. For a detailed, step-by-step timeline synchronizing all GitHub Issues and Commits, please see the full docs: 
+👉 **[Full Project Timeline (English)](Docs/Project_Timeline_En.md)** | **[Bản Tiến trình Tiếng Việt](Docs/Project_Timeline_Vi.md)**
+
+**Summary of Phases:**
+- **Phase 1: Foundation & Architecture:** Initialized the project, built the Data-Driven Level Generation System, and perfected the 3D procedural Unity Road Generator. Implemented the highly optimized Crowd Simulation System using Unity Job System, Burst, and `RenderMeshInstanced`.
+- **Phase 2: Organic Growth & Gameplay Systems:** Transitioned map generation to natural L-System organic curves, resolved Crowd behavior bugs, set up the Crowd Land System (configurable stop capacities and colors), and launched Bus Movement Logic V2.
+- **Phase 3: Polishing & Full Loop Integration:** Hooked UI, Audio (SFX), VFX, and Haptic Feedback into a cohesive gameplay loop. Added a satisfying "Victory Drive" logic to gracefully end levels when win conditions are met instead of freezing instantly.
+
+---
+
 ## 🛠️ Technical Details
 
 - **Engine**: Unity 6 (6000.x LTS)
@@ -137,6 +149,8 @@ The latest APK is available in the **Releases** section of this repository.
 - [x] Minimal HUD
 - [x] Clean, readable code structure
 - [x] Private GitHub repository
+- [x] Audio SFX & Haptic Feedback 
+- [x] Custom 3D App Icons
 - [ ] APK build
 - [ ] Gameplay video
 
