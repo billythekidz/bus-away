@@ -248,9 +248,11 @@ namespace BusAway.Gameplay
 
                             landChunkIndices[bestLand] = chunkIdx + 1; // move to next chunk
 
-
                             busWaitingQueue.Enqueue(new BusWaitingGroup { color = activeChunk.color, agentCount = activeChunk.agentCount, landIndex = bestLand });
                             Debug.Log($"Queueing Land {bestLand} with {activeChunk.agentCount} agents of color {activeChunk.color}");
+
+                            // Haptic: light tap to confirm valid land selection
+                            HapticFeedback.Light();
 
                             // Calculate top center edge of busWaitZone (smallest Z)
                             Vector3 targetWaitPos = new Vector3(0, 0, -2f);
@@ -561,6 +563,9 @@ namespace BusAway.Gameplay
                     
                     PrimeTween.Tween.LocalPosition(dummy.transform, localSeat, 0.25f, PrimeTween.Ease.OutQuad);
                     PrimeTween.Tween.LocalRotation(dummy.transform, Quaternion.identity, 0.25f, PrimeTween.Ease.OutQuad);
+
+                    // Haptic: medium pulse each time a passenger boards the bus
+                    HapticFeedback.Medium();
                     
                     yield return new WaitForSeconds(0.05f);
                 }
